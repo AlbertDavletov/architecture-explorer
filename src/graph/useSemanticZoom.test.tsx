@@ -63,6 +63,25 @@ function setup(reduced = false) {
 }
 
 describe('semantic navigation lifecycle', () => {
+  it('restores views across four nested entries and deep ancestor returns', () => {
+    const h = setup()
+    const root = { ...camera.view, x: camera.view.x + 19 }
+    camera.view = root
+    for (let round = 0; round < 3; round++) {
+      for (const id of ['clients', 'web', 'editor', 'rendering']) h.enter(id)
+      expect(h.result.current.parent).toBe('rendering')
+      h.select('compositor')
+      h.wheel(300)
+      h.finish()
+      expect(h.result.current.parent).toBe('editor')
+      act(() => h.result.current.back('clients'))
+      h.finish()
+      expect(h.result.current.selected).toBe('web')
+      act(() => h.result.current.back())
+      h.finish()
+      expect(camera.view).toEqual(root)
+    }
+  })
   it.each([undefined, 'files', 'records'])(
     'exits Storage with selection %s and restores history',
     (selected) => {

@@ -30,10 +30,10 @@ export function buildWorld(vertical: boolean) {
     scale: number,
   ): Rect {
     const items = children(parent)
-    const columns = vertical ? 1 : Math.min(3, items.length)
+    const columns = vertical ? 1 : Math.max(1, Math.min(3, items.length))
     const rows = Math.ceil(items.length / columns)
-    const gapX = 172,
-      gapY = 100
+    const gapX = items.length > 3 ? 64 : 172,
+      gapY = vertical ? 36 : 72
     const width = columns * CARD.width + (columns - 1) * gapX
     const height = rows * CARD.height + (rows - 1) * gapY
     const bounds = centered(

@@ -11,6 +11,8 @@ export type MapEdge = Edge<
     vertical: boolean
     scale: number
     exposure: Exposure
+    route?: number[][]
+    origin: { x: number; y: number }
   },
   'signal'
 >
@@ -36,9 +38,13 @@ export function SignalEdge({
     ey = dy + sy
   const mx = (sx + ex) / 2,
     my = (sy + ey) / 2
-  const d = vertical
+  const curve = vertical
     ? `M ${sx} ${sy} C ${sx} ${my / 2}, ${mx + bend} ${my / 2}, ${mx + bend} ${my} S ${ex} ${(my + ey) / 2}, ${ex} ${ey}`
     : `M ${sx} ${sy} C ${mx / 2} ${sy}, ${mx / 2} ${my + bend}, ${mx} ${my + bend} S ${(mx + ex) / 2} ${ey}, ${ex} ${ey}`
+  const d =
+    data!.route?.map(([x, y], i) => `${i ? 'L' : 'M'} ${x} ${y}`).join(' ') ??
+    curve
+  const origin = data!.route ? data!.origin : { x: sourceX, y: sourceY }
   useLayoutEffect(() => {
     if (!dot.current || !path.current) return
     const duration = Math.max(1, (path.current.getTotalLength() / 42) * 1000)
@@ -55,7 +61,7 @@ export function SignalEdge({
   return (
     <g
       className={`signal ${kind} ${exposure}`}
-      transform={`translate(${sourceX} ${sourceY}) scale(${scale})`}
+      transform={`translate(${origin.x} ${origin.y}) scale(${scale})`}
       aria-hidden="true"
     >
       <path
@@ -64,6 +70,7 @@ export function SignalEdge({
         fill="none"
         stroke="currentColor"
         strokeWidth="1.35"
+        strokeLinejoin="round"
         opacity=".53"
       />
       <g ref={dot} className="traveler" style={style}>

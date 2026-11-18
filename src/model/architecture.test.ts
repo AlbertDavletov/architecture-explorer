@@ -4,7 +4,13 @@ import { ancestry, children, components, project } from './architecture'
 describe('architecture projection', () => {
   it('preserves hierarchy and ancestor order', () => {
     expect(children().map((c) => c.id)).toEqual(['clients', 'cloud'])
-    expect(children('cloud').map((c) => c.id)).toEqual(['services', 'storage'])
+    expect(children('cloud').map((c) => c.id)).toEqual([
+      'services',
+      'storage',
+      'assets',
+      'notifications',
+      'sharing',
+    ])
     expect(ancestry('files').map((c) => c.id)).toEqual([
       'cloud',
       'storage',
@@ -18,10 +24,12 @@ describe('architecture projection', () => {
       { from: 'cloud', to: 'clients', kind: 'data' },
       { from: 'cloud', to: 'clients', kind: 'event' },
     ])
-    expect(project('cloud').edges).toEqual([
-      { from: 'services', to: 'storage', kind: 'request' },
-      { from: 'storage', to: 'services', kind: 'data' },
-    ])
+    expect(project('cloud').edges).toEqual(
+      expect.arrayContaining([
+        { from: 'services', to: 'storage', kind: 'request' },
+        { from: 'storage', to: 'services', kind: 'data' },
+      ]),
+    )
     expect(project('storage').edges).toEqual([
       { from: 'records', to: 'files', kind: 'data' },
     ])

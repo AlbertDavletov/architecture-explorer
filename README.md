@@ -37,7 +37,19 @@ Add interactions to `relationships` using `from`, `to`, and one of `request`, `d
 - Gesture intent is tracked separately from camera scale, so a selected expandable card remains enterable at the upper limit. Inward intent equivalent to 143% enters it, and outward intent below 72% at the lower zoom boundary returns one level regardless of selection. A short quiet period absorbs momentum after navigation. Breadcrumb changes and shell visibility use the camera's animation clock.
 - [Projection](src/model/architecture.ts) merges relationships by visible endpoints, direction, and signal type. The [scene](src/graph/scene.ts) mounts the focused siblings and their boundary, plus the adjacent group during a transition. [Signals](src/graph/SignalEdge.tsx) use a shared clock to preserve their phase across visits.
 
-The sample contains three levels and two siblings per area. Deterministic layout and edge routing are designed for small groups.
+## Hierarchy stress fixture
+
+The fictional Loom collaborative editor contains 35 components, 39 directed relationships, and five component levels. The overview has Clients and Cloud. Clients, Cloud, Editor, and Rendering each have five direct children. Assets has four. Branches include Web, Desktop, iOS, Android, asset uploads and processing, storage, notifications, and sharing.
+
+Try Clients ? Web app ? Editor ? Rendering, return to System overview, then enter Cloud ? Assets. The deepest cards are at component depth five. All navigation derives from parent links.
+
+Dense groups use smaller deterministic gaps. Connections that skip cards travel through row or side gutters. Direction and signal type remain distinct, with one dot per aggregated relationship.
+
+Validation covered 1440 ? 900, 1024 ? 768, 768 ? 1024, and 390 ? 844 in Chromium, including four nested entries, exact viewport restoration, another branch, wheel entry, and deselected exit. Automated tests also exercise eight siblings and seven levels without a fixed depth limit.
+
+Observed limits include shared route segments and edge crossings in Cloud and Editor. Routing avoids card interiors but does not optimize crossings or assign globally unique lanes. The mobile fixture's five-card groups fit at readable scale. A synthetic eight-card mobile group requires panning to preserve readable labels. Larger systems have not been benchmarked.
+
+The next useful step is testing a denser dependency fixture and physical trackpad gestures, then evaluating whether crossing reduction justifies a more sophisticated router.
 
 ## Regression tests
 

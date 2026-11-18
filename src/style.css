@@ -165,8 +165,8 @@ button:focus-visible {
 }
 .boundary-name {
   position: absolute;
-  left: 4%;
-  top: 8%;
+  left: calc(24px * var(--inner-unit));
+  top: calc(24px * var(--inner-unit));
   font-size: 14px;
   font-weight: 600;
   letter-spacing: -0.2px;

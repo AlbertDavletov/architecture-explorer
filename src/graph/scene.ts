@@ -3,6 +3,7 @@ import type { World } from './layout'
 import type { Exposure, MapNode, Shell } from './ComponentNode'
 import type { MapEdge } from './SignalEdge'
 import type { Journey } from './useSemanticZoom'
+import { route } from './routing'
 
 export function scene(
   world: World,
@@ -65,6 +66,13 @@ export function scene(
           targetHandle: 'in',
           ariaLabel: `${edge.kind} from ${components.get(edge.from)?.name} to ${components.get(edge.to)?.name}`,
           data: {
+            route: route(
+              world.places.get(backwards ? edge.to : edge.from)!,
+              world.places.get(backwards ? edge.from : edge.to)!,
+              world.vertical,
+              i - (signals.length - 1) / 2,
+            ),
+            origin: world.places.get(backwards ? edge.to : edge.from)!.box,
             kind: edge.kind,
             backwards,
             lane: i - (signals.length - 1) / 2,
