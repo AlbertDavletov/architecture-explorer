@@ -22,14 +22,14 @@ function centered(point: XYPosition, width: number, height: number): Rect {
 
 // Each group has its own drawing units. Resolve them into one world once,
 // including the room around the children that becomes their parent's outline.
-export function buildWorld(vertical: boolean) {
+export function buildWorld(vertical: boolean, getChildren = children) {
   const places = new Map<string, Place>()
   function group(
     parent: string | undefined,
     anchor: XYPosition,
     scale: number,
   ): Rect {
-    const items = children(parent)
+    const items = getChildren(parent)
     const columns = vertical ? 1 : Math.max(1, Math.min(3, items.length))
     const rows = Math.ceil(items.length / columns)
     const gapX = items.length > 3 ? 64 : 172,
@@ -52,7 +52,7 @@ export function buildWorld(vertical: boolean) {
         height: CARD.height * scale,
       }
       const childScale = scale * 0.42
-      const inside = children(item.id).length
+      const inside = getChildren(item.id).length
         ? group(item.id, center(box), childScale)
         : box
       places.set(item.id, { box, inside, scale, childScale })

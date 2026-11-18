@@ -47,10 +47,24 @@ Dense groups use smaller deterministic gaps. Connections that skip cards travel 
 
 Validation covered 1440 ? 900, 1024 ? 768, 768 ? 1024, and 390 ? 844 in Chromium, including four nested entries, exact viewport restoration, another branch, wheel entry, and deselected exit. Automated tests also exercise eight siblings and seven levels without a fixed depth limit.
 
-Observed limits include shared route segments and edge crossings in Cloud and Editor. Routing avoids card interiors but does not optimize crossings or assign globally unique lanes. The mobile fixture's five-card groups fit at readable scale. A synthetic eight-card mobile group requires panning to preserve readable labels. Larger systems have not been benchmarked.
+Observed limits include edge crossings in Cloud and Editor. Dense groups assign deterministic corridor offsets per visible connection and route vertical neighbors directly. Routing avoids card interiors but does not globally minimize crossings. The mobile fixture's five-card groups fit at readable scale. A synthetic eight-card mobile group requires panning to preserve readable labels. Larger systems have not been benchmarked.
 
 The next useful step is testing a denser dependency fixture and physical trackpad gestures, then evaluating whether crossing reduction justifies a more sophisticated router.
 
 ## Regression tests
 
 Run npm test for architecture projection, viewport calculations, navigation lifecycle, gesture blocking, resize, reduced motion, and component interaction tests. Tests use Vitest, React Testing Library, and jsdom.
+
+## Dense connections experiment (v0.5.1)
+
+Start with npm run dev and open http://127.0.0.1:5173/?fixture=dense. The query selects the synthetic fixture only in development. The default URL and production builds use Loom.
+
+[src/model/dense.json](src/model/dense.json) contains seven visible groups, two internal workers per group, and 28 underlying dependencies. Repeated cross-group relationships collapse to 13 visible connections while internal links remain inside their groups. Requests, data, events, and reverse directions are all represented. No dependency is dropped to reduce clutter.
+
+Before routing changes, unrelated pairs reused corridor segments and same-column neighbors took six-point side detours. After the changes, dense groups use stable offsets for ports and corridors, same-column neighbors connect directly, and the fixture has no positive-length shared straight segments. Exact open-interior segment/rectangle tests cover every routed segment, including thin crossings and six direction/type lanes. Point crossings remain visible, especially around Documents and on the long return to Workspace. This router does not promise a crossing-free drawing.
+
+Signal speed remains 42 sibling-local units per second with one dot per aggregated relationship. Deterministic per-edge phases stagger dots of the same type. Small chevrons indicate direction even with reduced motion.
+
+Browser validation used the actual development scenario at 1440 and 1024 pixels wide, including before/after screenshots, internal disclosure, moving signals, and reduced motion. Production regression checks traversed Loom through Rendering, restored the root viewport, explored Assets, and tested wheel entry and deselected exit at all four documented screen sizes. Production ignores the experimental query.
+
+The remaining readability limit is the number of distinct relationships, not just repeated dependencies. A substantially denser real group should be reviewed for meaningful domain abstraction before adding more routing machinery. The experiment retains every distinct visible relationship and adds no artificial hierarchy.

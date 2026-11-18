@@ -1,0 +1,307 @@
+{
+  "components": [
+    {
+      "id": "workspace",
+      "name": "Workspace",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "workspace-a",
+      "parent": "workspace",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "workspace-b",
+      "parent": "workspace",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "documents",
+      "name": "Documents",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "documents-a",
+      "parent": "documents",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "documents-b",
+      "parent": "documents",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "media",
+      "name": "Media",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "media-a",
+      "parent": "media",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "media-b",
+      "parent": "media",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "search",
+      "name": "Search",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "search-a",
+      "parent": "search",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "search-b",
+      "parent": "search",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "delivery",
+      "name": "Delivery",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "delivery-a",
+      "parent": "delivery",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "delivery-b",
+      "parent": "delivery",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "accounts",
+      "name": "Accounts",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "accounts-a",
+      "parent": "accounts",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "accounts-b",
+      "parent": "accounts",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "updates",
+      "name": "Updates",
+      "description": "Synthetic dependency test group.",
+      "icon": "server",
+      "color": "teal"
+    },
+    {
+      "id": "updates-a",
+      "parent": "updates",
+      "name": "Worker A",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    },
+    {
+      "id": "updates-b",
+      "parent": "updates",
+      "name": "Worker B",
+      "description": "Synthetic internal component.",
+      "icon": "server",
+      "color": "blue"
+    }
+  ],
+  "relationships": [
+    {
+      "from": "workspace-a",
+      "to": "documents-a",
+      "kind": "request"
+    },
+    {
+      "from": "workspace-b",
+      "to": "documents-b",
+      "kind": "request"
+    },
+    {
+      "from": "documents-a",
+      "to": "workspace-a",
+      "kind": "data"
+    },
+    {
+      "from": "documents-b",
+      "to": "workspace-b",
+      "kind": "data"
+    },
+    {
+      "from": "workspace-a",
+      "to": "documents-a",
+      "kind": "event"
+    },
+    {
+      "from": "workspace-b",
+      "to": "documents-b",
+      "kind": "event"
+    },
+    {
+      "from": "documents-a",
+      "to": "media-a",
+      "kind": "data"
+    },
+    {
+      "from": "documents-b",
+      "to": "media-b",
+      "kind": "data"
+    },
+    {
+      "from": "media-a",
+      "to": "documents-a",
+      "kind": "request"
+    },
+    {
+      "from": "media-b",
+      "to": "documents-b",
+      "kind": "request"
+    },
+    {
+      "from": "workspace-a",
+      "to": "media-a",
+      "kind": "request"
+    },
+    {
+      "from": "workspace-b",
+      "to": "media-b",
+      "kind": "request"
+    },
+    {
+      "from": "workspace-a",
+      "to": "search-a",
+      "kind": "event"
+    },
+    {
+      "from": "workspace-b",
+      "to": "search-b",
+      "kind": "event"
+    },
+    {
+      "from": "documents-a",
+      "to": "delivery-a",
+      "kind": "data"
+    },
+    {
+      "from": "documents-b",
+      "to": "delivery-b",
+      "kind": "data"
+    },
+    {
+      "from": "media-a",
+      "to": "accounts-a",
+      "kind": "request"
+    },
+    {
+      "from": "media-b",
+      "to": "accounts-b",
+      "kind": "request"
+    },
+    {
+      "from": "search-a",
+      "to": "delivery-a",
+      "kind": "data"
+    },
+    {
+      "from": "search-b",
+      "to": "delivery-b",
+      "kind": "data"
+    },
+    {
+      "from": "delivery-a",
+      "to": "updates-a",
+      "kind": "event"
+    },
+    {
+      "from": "delivery-b",
+      "to": "updates-b",
+      "kind": "event"
+    },
+    {
+      "from": "accounts-a",
+      "to": "updates-a",
+      "kind": "event"
+    },
+    {
+      "from": "accounts-b",
+      "to": "updates-b",
+      "kind": "event"
+    },
+    {
+      "from": "updates-a",
+      "to": "workspace-a",
+      "kind": "event"
+    },
+    {
+      "from": "updates-b",
+      "to": "workspace-b",
+      "kind": "event"
+    },
+    {
+      "from": "workspace-a",
+      "to": "workspace-b",
+      "kind": "data"
+    },
+    {
+      "from": "media-a",
+      "to": "media-b",
+      "kind": "event"
+    }
+  ]
+}

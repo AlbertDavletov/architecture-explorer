@@ -18,6 +18,7 @@ export type MapEdge = Edge<
 >
 
 export function SignalEdge({
+  id,
   sourceX,
   sourceY,
   targetX,
@@ -48,12 +49,17 @@ export function SignalEdge({
   useLayoutEffect(() => {
     if (!dot.current || !path.current) return
     const duration = Math.max(1, (path.current.getTotalLength() / 42) * 1000)
-    const phase = { request: 0.22, data: 0.61, event: 0.83 }[kind]
+    // Distinct deterministic phases keep same-type signals from bunching together.
+    const hash = Array.from(id).reduce(
+      (value, char) => (value * 31 + char.charCodeAt(0)) >>> 0,
+      0,
+    )
+    const phase = (hash % 997) / 997
     // A common document clock preserves phase across unmounts and return visits.
     dot.current.style.animationDuration = duration + 'ms'
     dot.current.style.animationDelay =
       -((performance.now() + duration * phase) % duration) + 'ms'
-  }, [d, kind])
+  }, [d, id])
   const style: CSSProperties = {
     offsetPath: `path('${d}')`,
     animationDirection: backwards ? 'reverse' : 'normal',
@@ -77,6 +83,19 @@ export function SignalEdge({
         <circle r="6.4" fill="currentColor" opacity=".12" />
         <circle r="3.6" fill="currentColor" stroke="white" strokeWidth=".8" />
       </g>
+      <path
+        className="signal-direction"
+        d={backwards ? 'M 3 -3 L -2 0 L 3 3' : 'M -3 -3 L 2 0 L -3 3'}
+        style={{
+          offsetPath: `path('${d}')`,
+          offsetDistance: '70%',
+          offsetRotate: 'auto',
+        }}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        opacity=".7"
+      />
     </g>
   )
 }

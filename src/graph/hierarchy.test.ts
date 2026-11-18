@@ -9,7 +9,7 @@ import {
 import fixture from '../model/architecture.json'
 import { buildWorld, framing } from './layout'
 import { scene } from './scene'
-import { route } from './routing'
+import { intersectsInterior } from './routing.test-utils'
 
 it('has a five-level fictional hierarchy with uneven branches and valid dependencies', () => {
   expect(components.size).toBe(35)
@@ -82,28 +82,18 @@ it.each([
       for (const edge of graph.edges) {
         expect(ids).toContain(edge.source)
         expect(ids).toContain(edge.target)
-        const source = world.places.get(edge.source)!,
-          target = world.places.get(edge.target)!
-        const points = route(source, target, world.vertical, edge.data!.lane)
+        const source = world.places.get(edge.source)!
+        const points = edge.data!.route
         if (!points) continue
-        // Every segment must avoid the interior of every visible card.
-        for (let i = 1; i < points.length; i++) {
-          const [x1, y1] = points[i - 1],
-            [x2, y2] = points[i]
-          for (let t = 0; t <= 1; t += 0.05) {
-            const x = source.box.x + (x1 + (x2 - x1) * t) * source.scale
-            const y = source.box.y + (y1 + (y2 - y1) * t) * source.scale
+        const worldPoints = points.map(([x, y]) => [
+          source.box.x + x * source.scale,
+          source.box.y + y * source.scale,
+        ])
+        for (let i = 1; i < worldPoints.length; i++)
+          for (const box of boxes)
             expect(
-              boxes.some(
-                (b) =>
-                  x > b.x + 1e-7 &&
-                  x < b.x + b.width - 1e-7 &&
-                  y > b.y + 1e-7 &&
-                  y < b.y + b.height - 1e-7,
-              ),
+              intersectsInterior(worldPoints[i - 1], worldPoints[i], box),
             ).toBe(false)
-          }
-        }
       }
     }
   },

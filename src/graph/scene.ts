@@ -48,6 +48,9 @@ export function scene(
       else node(component.id, 'closed', exposure)
     }
     const pairs = new Map<string, typeof graph.edges>()
+    const orderedIds = graph.edges
+      .map((e) => [e.from, e.kind, e.to].join('/'))
+      .sort()
     for (const edge of graph.edges) {
       const key = [edge.from, edge.to].sort().join('/')
       pairs.set(key, [...(pairs.get(key) ?? []), edge])
@@ -71,6 +74,16 @@ export function scene(
               world.places.get(backwards ? edge.from : edge.to)!,
               world.vertical,
               i - (signals.length - 1) / 2,
+              graph.nodes.length <= 3
+                ? undefined
+                : orderedIds.length > 1
+                  ? -10 +
+                    (20 *
+                      orderedIds.indexOf(
+                        [edge.from, edge.kind, edge.to].join('/'),
+                      )) /
+                      (orderedIds.length - 1)
+                  : 0,
             ),
             origin: world.places.get(backwards ? edge.to : edge.from)!.box,
             kind: edge.kind,
