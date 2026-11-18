@@ -1,0 +1,334 @@
+* {
+  box-sizing: border-box;
+}
+:root {
+  font:
+    14px/1.4 Inter,
+    'Segoe UI',
+    Arial,
+    sans-serif;
+  color: #253342;
+  background: #f7f9fa;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  margin: 0;
+}
+button {
+  font: inherit;
+  color: inherit;
+}
+button:focus-visible {
+  outline: 3px solid #4377ca;
+  outline-offset: 4px;
+}
+.canvas {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  min-height: 220px;
+  overflow: hidden;
+  isolation: isolate;
+  background-color: #f7f9fa;
+  background-image: radial-gradient(#cbd6e0 0.8px, transparent 0.9px);
+  background-size: 20px 20px;
+}
+.breadcrumbs,
+.legend {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  background: #fffffff5;
+  border: 1px solid #d9e0e6;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px #21334b08;
+}
+.breadcrumbs {
+  top: 22px;
+  left: 24px;
+  max-width: calc(100% - 48px);
+  padding: 5px 9px 5px 6px;
+  gap: 3px;
+  flex-wrap: wrap;
+  color: #8c98a6;
+}
+.brand-mark {
+  height: 28px;
+  width: 28px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  background: #e8eff8;
+  color: #44658c;
+  margin-right: 4px;
+}
+.breadcrumbs button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 560;
+  padding: 4px 5px;
+  border-radius: 4px;
+  color: #536678;
+}
+.breadcrumbs button:hover:enabled {
+  background: #f0f3f7;
+}
+.breadcrumbs [aria-current] {
+  color: #2d3d4e;
+}
+.breadcrumbs button:disabled {
+  cursor: default;
+}
+.legend {
+  left: 24px;
+  bottom: 22px;
+  gap: 15px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #536578;
+}
+.legend span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.legend i {
+  width: 7px;
+  height: 7px;
+  background: var(--signal);
+  border-radius: 50%;
+}
+.blue {
+  --ink: #3d6eae;
+  --tint: #e9f1fc;
+  --line: #b4c8df;
+  --wash: #e4edf8;
+}
+.teal {
+  --ink: #257973;
+  --tint: #e6f3ef;
+  --line: #a7c9c2;
+  --wash: #dceee8;
+}
+.violet {
+  --ink: #7965a0;
+  --tint: #f1edf8;
+  --line: #c5b9d9;
+  --wash: #eae4f2;
+}
+.node-unit {
+  position: relative;
+  transform: scale(var(--unit));
+  transform-origin: top left;
+  pointer-events: none;
+}
+.node-unit.closed {
+  --shell: 0;
+}
+.node-unit.boundary {
+  --shell: 1;
+}
+.node-unit.opening {
+  --shell: var(--open, 0);
+}
+.shell-outline {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(
+    var(--card-width) + (var(--expanded-width) - var(--card-width)) *
+      var(--shell)
+  );
+  height: calc(
+    var(--card-height) + (var(--expanded-height) - var(--card-height)) *
+      var(--shell)
+  );
+  border: 1px solid var(--line);
+  border-radius: calc(12px - 5px * var(--shell));
+  background: #fff;
+  box-shadow: 0 3px 8px #24374e0a;
+}
+.opening .shell-outline,
+.boundary .shell-outline {
+  background: color-mix(
+    in srgb,
+    color-mix(in srgb, var(--wash) 22%, transparent) calc(var(--shell) * 100%),
+    white
+  );
+  border-color: color-mix(in srgb, var(--line) 65%, transparent);
+  border-width: calc(1px - 0.5px * var(--shell));
+}
+.boundary-name {
+  position: absolute;
+  left: 4%;
+  top: 8%;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink);
+  transform: scale(var(--inner-unit));
+  transform-origin: top left;
+  white-space: nowrap;
+  opacity: var(--shell);
+}
+.node-card {
+  width: 100%;
+  height: 100%;
+  padding: 18px 20px;
+  border: 0;
+  background: transparent;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  border-radius: 12px;
+  pointer-events: auto;
+  cursor: pointer;
+  color: #23364a;
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+.node-card:disabled {
+  pointer-events: none;
+}
+.node-card:hover:enabled {
+  background: color-mix(in srgb, var(--tint) 32%, transparent);
+}
+.selected.closed .node-card {
+  background: color-mix(in srgb, var(--tint) 40%, transparent);
+  box-shadow:
+    inset 0 0 0 1.7px var(--ink),
+    0 0 0 3px var(--tint);
+}
+.node-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--tint);
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.node-affordance {
+  display: flex;
+  margin-left: auto;
+  color: #8395a4;
+}
+.enter-component {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  pointer-events: auto;
+  display: grid;
+  place-items: center;
+}
+.enter-component:hover,
+.enter-component:focus-visible {
+  background: var(--tint);
+  border-color: var(--line);
+}
+.enter-component:active {
+  background: var(--line);
+}
+.selected.closed:has(.enter-component) .node-card {
+  padding-right: 44px;
+}
+.node-card strong {
+  font-size: 18px;
+  font-weight: 620;
+  letter-spacing: -0.65px;
+  line-height: 1.14;
+}
+.card-note {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink);
+  pointer-events: none;
+}
+.react-flow__handle {
+  width: 0;
+  height: 0;
+  min-height: 0;
+  min-width: 0;
+  border: 0;
+  opacity: 0;
+}
+.outside {
+  opacity: var(--outside, 1);
+}
+.opening .node-card {
+  opacity: clamp(0, calc(1 - var(--open) * 2.65), 1);
+}
+.inside {
+  opacity: var(--inside, 0);
+}
+.request {
+  --signal: #437ed0;
+}
+.data {
+  --signal: #269873;
+}
+.event {
+  --signal: #d38a38;
+}
+.signal {
+  color: var(--signal);
+}
+.traveler {
+  offset-anchor: 0px 0px;
+  offset-rotate: 0deg;
+  animation: travel 4s linear infinite;
+}
+@keyframes travel {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node-card {
+    transition: none;
+  }
+  .traveler {
+    animation: none;
+    offset-distance: 55%;
+  }
+}
+@media (max-width: 620px) {
+  .breadcrumbs {
+    left: 12px;
+    top: 12px;
+    max-width: calc(100% - 24px);
+  }
+  .legend {
+    left: 12px;
+    bottom: 12px;
+  }
+}

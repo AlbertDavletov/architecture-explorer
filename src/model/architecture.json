@@ -1,0 +1,31 @@
+{
+  "components": [
+    { "id": "clients", "name": "Clients", "description": "Where people access the system.", "icon": "devices", "color": "blue" },
+    { "id": "cloud", "name": "Cloud", "description": "Where services and data live.", "icon": "cloud", "color": "teal" },
+    { "id": "web", "parent": "clients", "name": "Web app", "description": "The experience in a browser.", "icon": "browser", "color": "blue" },
+    { "id": "mobile", "parent": "clients", "name": "Mobile app", "description": "The experience on a phone.", "icon": "phone", "color": "violet" },
+    { "id": "services", "parent": "cloud", "name": "App services", "description": "Handle requests and send updates.", "icon": "server", "color": "teal" },
+    { "id": "storage", "parent": "cloud", "name": "Storage", "description": "Keeps records and shared files.", "icon": "storage", "color": "blue" },
+    { "id": "pages", "parent": "web", "name": "Pages", "description": "Show content and collect input.", "icon": "browser", "color": "blue" },
+    { "id": "web-cache", "parent": "web", "name": "Local cache", "description": "Keeps a copy for quick access.", "icon": "storage", "color": "teal" },
+    { "id": "screens", "parent": "mobile", "name": "App screens", "description": "Show the phone interface.", "icon": "phone", "color": "violet" },
+    { "id": "inbox", "parent": "mobile", "name": "Inbox", "description": "Collects updates for the user.", "icon": "inbox", "color": "teal" },
+    { "id": "gateway", "parent": "services", "name": "Gateway", "description": "Receives incoming requests.", "icon": "server", "color": "teal" },
+    { "id": "worker", "parent": "services", "name": "Worker", "description": "Completes background tasks.", "icon": "server", "color": "violet" },
+    { "id": "records", "parent": "storage", "name": "Records", "description": "Stores structured information.", "icon": "storage", "color": "blue" },
+    { "id": "files", "parent": "storage", "name": "Files", "description": "Stores uploaded documents.", "icon": "inbox", "color": "teal" }
+  ],
+  "relationships": [
+    { "from": "pages", "to": "gateway", "kind": "request" },
+    { "from": "screens", "to": "gateway", "kind": "request" },
+    { "from": "files", "to": "web-cache", "kind": "data" },
+    { "from": "worker", "to": "inbox", "kind": "event" },
+    { "from": "pages", "to": "inbox", "kind": "event" },
+    { "from": "web-cache", "to": "pages", "kind": "data" },
+    { "from": "inbox", "to": "screens", "kind": "event" },
+    { "from": "gateway", "to": "records", "kind": "request" },
+    { "from": "files", "to": "worker", "kind": "data" },
+    { "from": "gateway", "to": "worker", "kind": "event" },
+    { "from": "records", "to": "files", "kind": "data" }
+  ]
+}
