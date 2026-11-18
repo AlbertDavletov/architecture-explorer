@@ -83,7 +83,14 @@ export function createArchitecture(architecture: Architecture) {
     }
   }
 
-  return { components, children, ancestry, depth, project }
+  return {
+    components,
+    children,
+    ancestry,
+    depth,
+    project,
+    relationships: architecture.relationships,
+  }
 }
 
 const selectedFixture =
@@ -91,5 +98,5 @@ const selectedFixture =
   new URLSearchParams(window.location.search).get('fixture') === 'dense'
     ? dense
     : fixture
-export const { components, children, ancestry, depth, project } =
-  createArchitecture(selectedFixture as Architecture)
+export const architecture = createArchitecture(selectedFixture as Architecture)
+export const { components, children, ancestry, depth, project } = architecture

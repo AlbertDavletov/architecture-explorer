@@ -8,13 +8,37 @@ import {
   type RefObject,
 } from 'react'
 import { ReactFlow, ReactFlowProvider } from '@xyflow/react'
-import { ancestry, components } from './model/architecture'
+import { ancestry, components, architecture } from './model/architecture'
 import { ComponentNode, type MapNode } from './graph/ComponentNode'
 import { SignalEdge, type MapEdge } from './graph/SignalEdge'
 import { buildWorld, type Size } from './graph/layout'
 import { scene } from './graph/scene'
 import { useSemanticZoom } from './graph/useSemanticZoom'
 import { Icon } from './ui/Icon'
+import uploadImage from './workflows/upload-image.json'
+import { parseWorkflow } from './workflows/model'
+import {
+  projectStep,
+  projectParticipation,
+  stepContext,
+} from './workflows/projection'
+import { useWorkflow } from './workflows/useWorkflow'
+import { workflowOverlay } from './workflows/overlay'
+import { WorkflowControl } from './workflows/WorkflowControl'
+
+const workflowCatalog = (() => {
+  try {
+    return {
+      workflow: parseWorkflow(uploadImage, architecture),
+      error: undefined,
+    }
+  } catch (error) {
+    return {
+      workflow: undefined,
+      error: `Workflow unavailable for this architecture. ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
+})()
 
 const nodeTypes = { component: ComponentNode }
 const edgeTypes = { signal: SignalEdge }
@@ -38,7 +62,54 @@ function Map({
     return () => media.removeEventListener('change', change)
   }, [])
   const nav = useSemanticZoom(world, size, reduced, canvas)
-  const graph = useMemo(
+  const projections = useMemo(
+    () =>
+      workflowCatalog.workflow?.steps.map((step) =>
+        projectStep(step, architecture, nav.parent),
+      ) ?? [],
+    [nav.parent],
+  )
+  const playback = useWorkflow(
+    workflowCatalog.workflow,
+    projections,
+    `${nav.parent ?? 'root'}/${vertical}`,
+    nav.navigating,
+    reduced,
+  )
+  const participation = useMemo(
+    () =>
+      workflowCatalog.workflow
+        ? projectParticipation(
+            workflowCatalog.workflow,
+            architecture,
+            nav.parent,
+          )
+        : undefined,
+    [nav.parent],
+  )
+  const currentStep = workflowCatalog.workflow?.steps[playback.index]
+  const destination = currentStep
+    ? stepContext(currentStep, architecture)
+    : undefined
+  const canFollow =
+    (playback.status === 'playing' || playback.status === 'paused') &&
+    destination?.status === 'available' &&
+    destination.parent !== nav.parent &&
+    playback.current?.status !== 'visible'
+  const follow = canFollow
+    ? () => {
+        if (nav.navigating || destination?.status !== 'available') return
+        playback.pause()
+        nav.goTo(destination.parent)
+      }
+    : undefined
+  const stepLocation =
+    destination?.status === 'available'
+      ? ancestry(destination.parent)
+          .map((c) => c.name)
+          .join(' / ') || 'System overview'
+      : undefined
+  const baseGraph = useMemo(
     () =>
       scene(
         world,
@@ -58,6 +129,13 @@ function Map({
       nav.select,
       nav.enter,
     ],
+  )
+  const graph = workflowOverlay(
+    baseGraph,
+    projections,
+    playback,
+    nav.navigating,
+    participation,
   )
   const path = ancestry(nav.parent)
   useEffect(() => {
@@ -117,6 +195,13 @@ function Map({
           </Fragment>
         ))}
       </nav>
+      <WorkflowControl
+        {...workflowCatalog}
+        playback={playback}
+        navigating={nav.navigating}
+        follow={follow}
+        location={stepLocation}
+      />
       <div className="legend" aria-label="Illustrative signals">
         {[
           ['request', 'Requests'],

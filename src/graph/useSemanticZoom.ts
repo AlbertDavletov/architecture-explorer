@@ -8,8 +8,9 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import { useReactFlow, type Viewport } from '@xyflow/react'
-import { children, components } from '../model/architecture'
+import { ancestry, children, components } from '../model/architecture'
 import { framing, reframe, type Size, type World } from './layout'
+import { contextRoute } from './navigation'
 
 interface Frame {
   parent?: string
@@ -26,6 +27,7 @@ interface Trip {
   steps: Journey[]
   start: number
   duration: number
+  waypoints?: Frame[]
 }
 
 const GESTURE_GAP = 190
@@ -70,7 +72,7 @@ export function useSemanticZoom(
   )
 
   const travel = useCallback(
-    (steps: Journey[], to: Frame) => {
+    (steps: Journey[], to: Frame, waypoints?: Frame[]) => {
       locked.current = true
       restoreFocus.current = !!canvas.current?.querySelector(':focus-visible')
       setStepIndex(0)
@@ -78,8 +80,15 @@ export function useSemanticZoom(
         steps,
         from: { parent, view: flow.getViewport() },
         to,
+        waypoints,
         start: performance.now(),
-        duration: steps.length > 1 ? 690 : steps.length ? 570 : 320,
+        duration: waypoints
+          ? Math.min(2400, Math.max(570, steps.length * 440))
+          : steps.length > 1
+            ? 690
+            : steps.length
+              ? 570
+              : 320,
       })
     },
     [canvas, flow, parent],
@@ -125,6 +134,60 @@ export function useSemanticZoom(
     [parent, travel, world, size],
   )
 
+  // A single coordinated route for user-requested navigation to any container.
+  // Normal entry/back keep their existing camera behavior and saved viewports.
+  const goTo = useCallback(
+    (target?: string) => {
+      if (
+        locked.current ||
+        target === parent ||
+        (target && !children(target).length)
+      )
+        return
+      const { contexts } = contextRoute(parent, target)
+      const saved = new Map(
+        history.current.map((frame) => [frame.parent, frame]),
+      )
+      saved.set(parent, { parent, view: flow.getViewport() })
+      const waypoints = contexts.map((id, i) =>
+        i === 0
+          ? saved.get(parent)!
+          : {
+              parent: id,
+              view:
+                i === contexts.length - 1
+                  ? framing(world, size, id).home
+                  : (saved.get(id)?.view ?? framing(world, size, id).home),
+            },
+      )
+      const steps = contexts.slice(1).map((id, i): Journey => {
+        const entering =
+          id !== undefined && components.get(id)?.parent === contexts[i]
+        return entering
+          ? { outer: contexts[i], inner: id!, entering }
+          : { outer: id, inner: contexts[i]!, entering }
+      })
+      const ancestors = [
+        undefined,
+        ...ancestry(target)
+          .slice(0, -1)
+          .map((c) => c.id),
+      ]
+      history.current = target
+        ? ancestors.map(
+            (id) =>
+              saved.get(id) ??
+              waypoints.find((f) => f.parent === id) ?? {
+                parent: id,
+                view: framing(world, size, id).home,
+              },
+          )
+        : []
+      travel(steps, waypoints.at(-1)!, waypoints)
+    },
+    [parent, flow, world, size, travel],
+  )
+
   useLayoutEffect(() => {
     if (trip || !restoreFocus.current) return
     const raf = requestAnimationFrame(() => {
@@ -144,25 +207,31 @@ export function useSemanticZoom(
   useLayoutEffect(() => {
     if (!trip || !canvas.current) return
     const el = canvas.current
-    const { from, to, steps, start, duration } = trip
+    const { from, to, steps, start, duration, waypoints } = trip
     let shownIndex = -1
     let location = from.parent
     let raf = 0
     function tick(now: number, beforePaint = false) {
       const t = reduced ? 1 : Math.min(1, Math.max(0, (now - start) / duration))
       const eased = t * t * (3 - 2 * t)
-      const a = from.view,
-        b = to.view
-      const zoom = a.zoom * Math.pow(b.zoom / a.zoom, eased)
+      const routePosition = t * steps.length
+      const leg = Math.min(steps.length - 1, Math.floor(routePosition))
+      const local = routePosition - leg
+      const progress = waypoints ? local * local * (3 - 2 * local) : eased
+      const a = waypoints ? waypoints[leg].view : from.view,
+        b = waypoints ? waypoints[leg + 1].view : to.view
+      const zoom = a.zoom * Math.pow(b.zoom / a.zoom, progress)
       const pan =
         Math.abs(b.zoom - a.zoom) < 1e-8
-          ? eased
+          ? progress
           : (zoom - a.zoom) / (b.zoom - a.zoom)
       void flow.setViewport(
-        t === 1 ? b : { zoom, x: mix(a.x, b.x, pan), y: mix(a.y, b.y, pan) },
+        t === 1
+          ? to.view
+          : { zoom, x: mix(a.x, b.x, pan), y: mix(a.y, b.y, pan) },
       )
       if (steps.length) {
-        const along = eased * steps.length
+        const along = waypoints ? leg + progress : eased * steps.length
         const i = Math.min(steps.length - 1, Math.floor(along))
         const step = steps[i]
         const open = step.entering ? along - i : 1 - (along - i)
@@ -227,7 +296,12 @@ export function useSemanticZoom(
     })
     history.current = history.current.map(convert)
     if (trip)
-      setTrip({ ...trip, from: convert(trip.from), to: convert(trip.to) })
+      setTrip({
+        ...trip,
+        from: convert(trip.from),
+        to: convert(trip.to),
+        waypoints: trip.waypoints?.map(convert),
+      })
     else {
       const next = convert({ parent, view: flow.getViewport() }).view
       void flow.setViewport(next)
@@ -336,6 +410,7 @@ export function useSemanticZoom(
     explored,
     enter,
     back,
+    goTo,
     journey: trip?.steps[stepIndex],
     navigating: !!trip,
   }

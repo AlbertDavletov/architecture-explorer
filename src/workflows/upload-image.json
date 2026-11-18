@@ -1,0 +1,43 @@
+{
+  "id": "upload-image",
+  "name": "Upload an image",
+  "description": "An illustrative Loom scenario, not live traffic.",
+  "execution": "sequence",
+  "steps": [
+    {
+      "id": "request",
+      "from": "pages",
+      "to": "gateway",
+      "kind": "request",
+      "description": "You choose an image. The web app requests an upload."
+    },
+    {
+      "id": "transfer",
+      "from": "gateway",
+      "to": "uploads",
+      "kind": "data",
+      "description": "The gateway passes the image data to Uploads."
+    },
+    {
+      "id": "process",
+      "from": "uploads",
+      "to": "processing",
+      "kind": "event",
+      "description": "The upload triggers preview and thumbnail processing."
+    },
+    {
+      "id": "catalog",
+      "from": "processing",
+      "to": "catalog",
+      "kind": "data",
+      "description": "The processed image is added to the asset catalog."
+    },
+    {
+      "id": "available",
+      "from": "catalog",
+      "to": "pages",
+      "kind": "data",
+      "description": "The catalog returns the ready image to the web app."
+    }
+  ]
+}

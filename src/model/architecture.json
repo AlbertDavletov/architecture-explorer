@@ -281,6 +281,21 @@
   ],
   "relationships": [
     {
+      "from": "gateway",
+      "to": "uploads",
+      "kind": "data"
+    },
+    {
+      "from": "uploads",
+      "to": "processing",
+      "kind": "event"
+    },
+    {
+      "from": "catalog",
+      "to": "pages",
+      "kind": "data"
+    },
+    {
       "from": "pages",
       "to": "gateway",
       "kind": "request"

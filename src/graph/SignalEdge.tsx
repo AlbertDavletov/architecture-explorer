@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, type CSSProperties } from 'react'
 import type { Edge, EdgeProps } from '@xyflow/react'
 import type { SignalKind } from '../model/architecture'
 import type { Exposure } from './ComponentNode'
+import type { Emphasis, WorkflowSignal } from '../workflows/overlay'
 
 export type MapEdge = Edge<
   {
@@ -13,12 +14,13 @@ export type MapEdge = Edge<
     exposure: Exposure
     route?: number[][]
     origin: { x: number; y: number }
+    emphasis?: Emphasis
+    signal?: WorkflowSignal
   },
   'signal'
 >
 
 export function SignalEdge({
-  id,
   sourceX,
   sourceY,
   targetX,
@@ -28,6 +30,7 @@ export function SignalEdge({
   const path = useRef<SVGPathElement>(null)
   const dot = useRef<SVGGElement>(null)
   const { kind, backwards, lane, vertical, scale, exposure } = data!
+  const signal = data!.signal
   // Draw in sibling-local units, so nested signals keep the same apparent pace.
   const dx = (targetX - sourceX) / scale,
     dy = (targetY - sourceY) / scale
@@ -49,53 +52,59 @@ export function SignalEdge({
   useLayoutEffect(() => {
     if (!dot.current || !path.current) return
     const duration = Math.max(1, (path.current.getTotalLength() / 42) * 1000)
-    // Distinct deterministic phases keep same-type signals from bunching together.
-    const hash = Array.from(id).reduce(
-      (value, char) => (value * 31 + char.charCodeAt(0)) >>> 0,
-      0,
-    )
-    const phase = (hash % 997) / 997
-    // A common document clock preserves phase across unmounts and return visits.
     dot.current.style.animationDuration = duration + 'ms'
-    dot.current.style.animationDelay =
-      -((performance.now() + duration * phase) % duration) + 'ms'
-  }, [d, id])
+    signal?.measure(duration)
+  }, [d, signal?.token, signal?.measure])
   const style: CSSProperties = {
     offsetPath: `path('${d}')`,
     animationDirection: backwards ? 'reverse' : 'normal',
   }
   return (
     <g
-      className={`signal ${kind} ${exposure}`}
+      className={`signal ${kind} ${exposure} ${data!.emphasis ?? ''}`}
       transform={`translate(${origin.x} ${origin.y}) scale(${scale})`}
       aria-hidden="true"
     >
-      <path
-        ref={path}
-        d={d}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.35"
-        strokeLinejoin="round"
-        opacity=".53"
-      />
-      <g ref={dot} className="traveler" style={style}>
-        <circle r="6.4" fill="currentColor" opacity=".12" />
-        <circle r="3.6" fill="currentColor" stroke="white" strokeWidth=".8" />
+      <g className="signal-visual">
+        <path
+          ref={path}
+          d={d}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.35"
+          strokeLinejoin="round"
+          opacity=".53"
+        />
+        {signal && (
+          <g
+            key={signal.token}
+            ref={dot}
+            className={`traveler${signal.reduced ? ' reduced' : ''}`}
+            style={style}
+          >
+            <circle r="6.4" fill="currentColor" opacity=".12" />
+            <circle
+              r="3.6"
+              fill="currentColor"
+              stroke="white"
+              strokeWidth=".8"
+            />
+          </g>
+        )}
+        <path
+          className="signal-direction"
+          d={backwards ? 'M 3 -3 L -2 0 L 3 3' : 'M -3 -3 L 2 0 L -3 3'}
+          style={{
+            offsetPath: `path('${d}')`,
+            offsetDistance: '70%',
+            offsetRotate: 'auto',
+          }}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          opacity=".7"
+        />
       </g>
-      <path
-        className="signal-direction"
-        d={backwards ? 'M 3 -3 L -2 0 L 3 3' : 'M -3 -3 L 2 0 L -3 3'}
-        style={{
-          offsetPath: `path('${d}')`,
-          offsetDistance: '70%',
-          offsetRotate: 'auto',
-        }}
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        opacity=".7"
-      />
     </g>
   )
 }

@@ -302,7 +302,149 @@ button:focus-visible {
 .traveler {
   offset-anchor: 0px 0px;
   offset-rotate: 0deg;
-  animation: travel 4s linear infinite;
+  animation: travel 4s linear 1 both;
+}
+.traveler.reduced {
+  animation: none;
+  offset-distance: 55%;
+}
+.signal-visual,
+.node-visual {
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+.node-visual {
+  width: 100%;
+  height: 100%;
+}
+.signal.dimmed .signal-visual {
+  opacity: 0.17;
+}
+.node-unit.dimmed .node-visual {
+  opacity: 0.58;
+}
+.signal.related .signal-visual > path:first-child {
+  opacity: 0.8;
+  stroke-width: 1.7;
+}
+.signal.current .signal-visual > path:first-child {
+  opacity: 1;
+  stroke-width: 2.3;
+}
+.node-unit.related.closed .shell-outline {
+  border-color: #8494a4;
+  box-shadow: 0 0 0 2px #e4e9ee;
+}
+.node-unit.contains.closed .shell-outline {
+  border-style: dashed;
+}
+.node-affordance.workflow-inside {
+  color: #4b6074;
+  background: #edf1f5;
+  border: 1px solid #9ba9b7;
+  border-radius: 5px;
+  padding: 3px;
+}
+.node-unit.current.closed .shell-outline {
+  border: 2px solid #50667b;
+  box-shadow: 0 0 0 2px #e4e9ee;
+}
+.shell-outline {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+.workflow-location {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+.workflow-follow {
+  border: 1px solid #c2cdd7;
+  border-radius: 5px;
+  background: #f4f6f8;
+  padding: 2px 9px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.workflow-follow:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .node-visual,
+  .signal-visual,
+  .shell-outline {
+    transition: none;
+  }
+}
+.workflow-trigger,
+.workflow-control {
+  position: absolute;
+  z-index: 8;
+  right: 24px;
+  bottom: 22px;
+  background: #fffffff5;
+  border: 1px solid #d9e0e6;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px #21334b08;
+}
+.workflow-trigger {
+  padding: 9px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.workflow-control {
+  width: 314px;
+  padding: 12px 14px;
+  font-size: 12px;
+}
+.workflow-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.workflow-heading strong {
+  font-size: 14px;
+  margin-right: auto;
+}
+.workflow-heading button:not(.workflow-start) {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  font-size: 22px;
+  border-radius: 5px;
+}
+.workflow-control small {
+  color: #627487;
+  font-size: 11px;
+}
+.workflow-status {
+  margin: 10px 0;
+}
+.workflow-status p {
+  margin: 0 0 5px;
+}
+.step-count {
+  color: #627487;
+  font-variant-numeric: tabular-nums;
+  margin-right: 4px;
+}
+.workflow-start {
+  border: 1px solid #b4c8df;
+  border-radius: 6px;
+  background: #e9f1fc;
+  padding: 5px 13px;
+  cursor: pointer;
+}
+.workflow-start:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 @keyframes travel {
   from {
@@ -330,5 +472,42 @@ button:focus-visible {
   .legend {
     left: 12px;
     bottom: 12px;
+  }
+  .workflow-trigger {
+    right: 12px;
+    bottom: 54px;
+  }
+  .workflow-control {
+    right: 12px;
+    bottom: 12px;
+    width: calc(100% - 24px);
+    padding: 6px 12px;
+  }
+  .workflow-heading {
+    gap: 6px;
+  }
+  .workflow-heading button:not(.workflow-start) {
+    height: 24px;
+  }
+  .workflow-heading strong {
+    font-size: 13px;
+  }
+  .workflow-heading strong::after {
+    content: ' · Demo';
+    font-size: 10px;
+    font-weight: 400;
+    color: #627487;
+  }
+  .workflow-control > small {
+    display: none;
+  }
+  .workflow-status {
+    margin: 4px 0 0;
+  }
+  .canvas:has(.workflow-control) .legend {
+    display: none;
+  }
+  .workflow-start {
+    padding: 4px 8px;
   }
 }

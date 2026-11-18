@@ -195,4 +195,67 @@ describe('semantic navigation lifecycle', () => {
     expect(h.result.current.navigating).toBe(false)
     expect(h.result.current.explored).toBe(true)
   })
+
+  it('crosses branches through their common ancestor in one locked trip and preserves ancestor history', () => {
+    const h = setup()
+    const root = { ...camera.view, x: camera.view.x + 27 }
+    camera.view = root
+    h.enter('clients')
+    h.enter('web')
+    camera.setViewport.mockClear()
+    act(() => h.result.current.goTo('assets'))
+    expect(h.result.current.navigating).toBe(true)
+    // Duplicate follow/back requests cannot create competing trips.
+    act(() => {
+      h.result.current.goTo('storage')
+      h.result.current.back()
+    })
+    act(() => vi.advanceTimersByTime(3000))
+    expect(h.result.current.parent).toBe('assets')
+    expect(h.result.current.navigating).toBe(false)
+    expect(camera.view).toEqual(framing(world, size, 'assets').home)
+    const zooms = camera.setViewport.mock.calls.map(([v]) => v.zoom)
+    expect(Math.min(...zooms)).toBeLessThan(
+      framing(world, size, 'cloud').home.zoom,
+    )
+    act(() => h.result.current.back('cloud'))
+    h.finish()
+    expect(h.result.current.parent).toBe('cloud')
+    act(() => h.result.current.back())
+    h.finish()
+    expect(camera.view).toEqual(root)
+  })
+
+  it('follows down multiple levels, does nothing at the destination and rejects leaf targets', () => {
+    const h = setup()
+    act(() => h.result.current.goTo('assets'))
+    act(() => vi.advanceTimersByTime(3000))
+    expect(h.result.current.parent).toBe('assets')
+    const view = { ...camera.view }
+    act(() => h.result.current.goTo('assets'))
+    expect(h.result.current.navigating).toBe(false)
+    act(() => h.result.current.goTo('processing'))
+    expect(h.result.current.navigating).toBe(false)
+    expect(camera.view).toEqual(view)
+    act(() => h.result.current.goTo())
+    act(() => vi.advanceTimersByTime(3000))
+    expect(h.result.current.parent).toBeUndefined()
+  })
+
+  it('reframes cross-branch waypoints on resize and resolves the full trip with reduced motion', () => {
+    const h = setup()
+    h.enter('clients')
+    h.enter('web')
+    act(() => h.result.current.goTo('assets'))
+    act(() => vi.advanceTimersByTime(250))
+    const narrow = { width: 390, height: 844 }
+    h.rerender({ size: narrow, reduced: false })
+    act(() => vi.advanceTimersByTime(3000))
+    expect(h.result.current.parent).toBe('assets')
+    expect(Object.values(camera.view).every(Number.isFinite)).toBe(true)
+    h.rerender({ size: narrow, reduced: true })
+    act(() => h.result.current.goTo('web'))
+    expect(h.result.current.parent).toBe('web')
+    expect(h.result.current.navigating).toBe(false)
+  })
 })

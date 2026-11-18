@@ -23,7 +23,7 @@ The experience should remain intuitive regardless of the size or complexity of t
 
 Explore the structure of a software system through a living, zoomable architecture map.
 
-- Discover components and their relationships.
+- Discover static components and connections, with directional arrows or chevrons and no continuously moving dots.
 - Zoom into components to reveal architectural details.
 - Navigate across different levels of abstraction.
 - Understand how information generally moves between components.
@@ -31,7 +31,7 @@ Explore the structure of a software system through a living, zoomable architectu
 
 ### Layer 2 — Workflows
 
-**How does the system work?**
+**What happens when a specific action occurs?**
 
 Explore what happens when a specific action or event occurs.
 
@@ -43,7 +43,7 @@ Examples:
 - Save changes.
 - Share a document.
 
-A workflow highlights the relevant components and shows how requests, data, and events move through the system.
+A workflow highlights the relevant components and connections while leaving unrelated architecture visible but less prominent. Animated dots appear only on relationships involved in the selected workflow, following its logical execution sequence. Playback ends when the workflow finishes.
 
 Workflows use the same architecture map and Semantic Zoom navigation.
 
@@ -101,7 +101,9 @@ Provide useful zoom boundaries and subtle discoverability hints.
 
 ### P7 — Living Signals
 
-Represent interactions using small animated colored dots moving along connections.
+Motion must have meaning. Architecture shows structure. Traffic shows activity. Workflows show behavior.
+
+Architecture uses static directional connections. Workflows use small animated colored dots to explain a specific execution. Optional future Traffic Awareness can use aggregated signal frequency or density to show activity.
 
 - Blue — requests.
 - Green — data and file transfers.
@@ -121,6 +123,10 @@ Unrelated parts of the system become less prominent, without necessarily disappe
 
 Closing a workflow restores the normal architecture view.
 
+**A workflow should reveal its path before it starts moving.** Preview its participating components and connections without changing their layout or blocking unrelated exploration.
+
+**Hidden activity should never mean hidden direction.** Distinguish direct participation from activity inside a component, and make the current step discoverable at any level.
+
 ### P9 — Show Cause and Effect
 
 A workflow is more than a highlighted path.
@@ -139,9 +145,13 @@ Zooming changes the amount of detail shown, not the underlying workflow.
 
 The user should be able to explore an operation at different architectural levels while preserving its logical context and progress.
 
+**The user explores the system; the workflow guides, but never takes control.** Follow is an explicit user action. It navigates through the shared hierarchy to the nearest useful context, preserves the current step, and leaves playback paused until the user continues.
+
 ### P11 — Traffic Awareness Without Clutter
 
-Traffic intensity can be represented through the frequency or density of animated signals.
+**How much activity moves through the system?**
+
+Traffic Awareness is an optional future capability of the Architecture layer, not a third core layer. It is not implemented in this iteration. Aggregated traffic intensity can be represented through the frequency or density of animated signals.
 
 Where meaningful, client components may display their share of traffic as a percentage.
 
@@ -172,7 +182,7 @@ These models should work together without becoming tightly coupled.
 
 Clearly distinguish illustrative workflows, inferred interactions, and verified runtime information.
 
-Animated dots in an architectural overview do not necessarily represent actual live requests.
+Workflow dots represent a simulated logical execution unless explicitly identified as verified runtime information.
 
 Traffic measurements must not be confused with simulated workflow playback.
 
