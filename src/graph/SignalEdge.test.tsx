@@ -1,4 +1,4 @@
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { EdgeProps } from '@xyflow/react'
 import { SignalEdge, type MapEdge } from './SignalEdge'
@@ -37,19 +37,22 @@ it('measures a single workflow signal at fixed speed and preserves direction', (
     value: () => 84,
   })
   const measure = vi.fn()
+  const finish = vi.fn()
   const h = render(
     <svg>
       <SignalEdge
         {...props}
         data={{
           ...props.data!,
-          signal: { token: '1/0', reduced: false, measure },
+          signal: { token: '1/0', reduced: false, measure, finish },
         }}
       />
     </svg>,
   )
   expect(measure).toHaveBeenCalledWith(2000)
   expect(h.container.querySelectorAll('.traveler')).toHaveLength(1)
+  fireEvent.animationEnd(h.container.querySelector('.traveler')!)
+  expect(finish).toHaveBeenCalledTimes(1)
   expect(
     (h.container.querySelector('.traveler') as SVGElement).style
       .animationDirection,
@@ -60,7 +63,7 @@ it('measures a single workflow signal at fixed speed and preserves direction', (
         {...props}
         data={{
           ...props.data!,
-          signal: { token: '1/0', reduced: true, measure },
+          signal: { token: '1/0', reduced: true, measure, finish },
         }}
       />
     </svg>,

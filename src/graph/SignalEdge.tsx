@@ -81,6 +81,7 @@ export function SignalEdge({
             ref={dot}
             className={`traveler${signal.reduced ? ' reduced' : ''}`}
             style={style}
+            onAnimationEnd={signal.finish}
           >
             <circle r="6.4" fill="currentColor" opacity=".12" />
             <circle

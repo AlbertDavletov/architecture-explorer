@@ -1,172 +1,366 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { architecture } from '../model/architecture'
+import { architecture, createArchitecture } from '../model/architecture'
 import raw from './upload-image.json'
 import { parseWorkflow } from './model'
 import { projectStep, projectParticipation } from './projection'
-import { COMPLETION_HOLD, STEP_DWELL, useWorkflow } from './useWorkflow'
+import {
+  FOCUS_DWELL,
+  STATIC_DWELL,
+  useWorkflow,
+  type WorkflowNavigation,
+} from './useWorkflow'
 import { workflowOverlay } from './overlay'
 import { scene } from '../graph/scene'
 import { buildWorld } from '../graph/layout'
 
 const workflow = parseWorkflow(raw, architecture)
-const projections = workflow.steps.map((s) => projectStep(s, architecture))
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => {
   cleanup()
   vi.useRealTimers()
 })
-function setup() {
-  return renderHook(
-    ({ context, navigating, reduced }) =>
-      useWorkflow(workflow, projections, context, navigating, reduced),
-    { initialProps: { context: 'root', navigating: false, reduced: false } },
+function setup(parent?: string, reduced = false) {
+  let settle: (success: boolean) => void = () => {}
+  let signal: AbortSignal | undefined
+  const nav: WorkflowNavigation = {
+    parent,
+    navigating: false,
+    goTo: vi.fn((_parent, abort) => {
+      signal = abort
+      if (_parent === nav.parent) return Promise.resolve(true)
+      return new Promise<boolean>((resolve) => {
+        settle = resolve
+        abort?.addEventListener('abort', () => resolve(false), { once: true })
+      })
+    }),
+  }
+  const h = renderHook(
+    ({ navigation, reduced }) =>
+      useWorkflow(workflow, architecture, navigation, reduced),
+    { initialProps: { navigation: nav, reduced } },
   )
+  const open = () => act(() => h.result.current.open())
+  const start = () => act(() => h.result.current.start())
+  const focus = async () =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(FOCUS_DWELL)
+    })
+  const arrive = async (parent?: string) => {
+    nav.parent = parent
+    h.rerender({ navigation: { ...nav, parent, navigating: false }, reduced })
+    await act(async () => {
+      settle(true)
+    })
+    await focus()
+  }
+  const complete = () => act(() => h.result.current.finish())
+  return {
+    ...h,
+    nav,
+    open,
+    start,
+    focus,
+    arrive,
+    complete,
+    signal: () => signal,
+  }
 }
-it('starts, advances in order, completes once, clears highlighting and replays', () => {
+
+it('previews only and runs one first step without automatic progression', async () => {
   const h = setup()
-  expect(h.result.current.status).toBe('closed')
-  act(() => h.result.current.open())
+  h.open()
   expect(h.result.current.status).toBe('preview')
   expect(h.result.current.highlighted).toBe(true)
-  act(() => h.result.current.start())
-  for (let i = 0; i < workflow.steps.length; i++) {
-    expect(h.result.current.index).toBe(i)
-    if (projections[i].status === 'visible')
-      act(() => h.result.current.measure(1000))
-    act(() =>
-      vi.advanceTimersByTime(
-        projections[i].status === 'visible' ? 1600 : STEP_DWELL,
-      ),
-    )
-  }
-  expect(h.result.current.status).toBe('complete')
-  expect(h.result.current.highlighted).toBe(true)
-  act(() => vi.advanceTimersByTime(COMPLETION_HOLD))
-  expect(h.result.current.highlighted).toBe(false)
-  act(() => vi.advanceTimersByTime(100000))
-  expect(h.result.current.index).toBe(4)
-  act(() => h.result.current.start())
-  expect(h.result.current.status).toBe('playing')
-  expect(h.result.current.index).toBe(0)
-})
-it('closing cancels active timers and removes the overlay', () => {
-  const h = setup()
-  act(() => h.result.current.start())
-  act(() => h.result.current.measure(1000))
-  act(() => h.result.current.close())
-  act(() => vi.advanceTimersByTime(100000))
-  expect(h.result.current.status).toBe('closed')
-  expect(h.result.current.index).toBe(0)
-  expect(h.result.current.highlighted).toBe(false)
-})
-it('pauses immediately on navigation, retains logical step and resumes deliberately', () => {
-  const h = setup()
-  act(() => h.result.current.start())
-  act(() => h.result.current.measure(1000))
-  act(() => vi.advanceTimersByTime(1600))
-  expect(h.result.current.index).toBe(1)
-  h.rerender({ context: 'root', navigating: true, reduced: false })
-  expect(h.result.current.status).toBe('paused')
-  h.rerender({ context: 'cloud', navigating: false, reduced: false })
-  act(() => vi.advanceTimersByTime(100000))
-  expect(h.result.current.index).toBe(1)
-  act(() => h.result.current.resume())
-  act(() => vi.advanceTimersByTime(STEP_DWELL))
-  expect(h.result.current.index).toBe(2)
-})
-it('reduced motion runs a finite sequence without geometry or animation events', () => {
-  const h = setup()
-  h.rerender({ context: 'root', navigating: false, reduced: true })
-  act(() => h.result.current.start())
-  for (let i = 0; i < 5; i++) act(() => vi.advanceTimersByTime(STEP_DWELL))
-  expect(h.result.current.status).toBe('complete')
-})
-it('overlays only relevant edges without changing layout, selection or navigation callbacks', () => {
-  const graph = scene(
-    buildWorld(false),
-    undefined,
-    undefined,
+  act(() => vi.advanceTimersByTime(60000))
+  expect(h.result.current.status).toBe('preview')
+  h.start()
+  expect(h.nav.goTo).toHaveBeenCalledWith(undefined, expect.any(AbortSignal), [
+    'clients',
     'cloud',
-    true,
-    vi.fn(),
-    vi.fn(),
-  )
-  const h = setup()
-  expect(workflowOverlay(graph, projections, h.result.current, false)).toBe(
-    graph,
-  )
-  act(() => h.result.current.start())
-  const shown = workflowOverlay(graph, projections, h.result.current, false)
-  expect(shown.edges.filter((e) => e.data?.signal).map((e) => e.id)).toEqual([
-    'clients/request/cloud',
   ])
-  expect(
-    shown.edges.find((e) => e.id === 'cloud/event/clients')?.data?.emphasis,
-  ).toBe('dimmed')
-  shown.nodes.forEach((n, i) => {
-    expect(n.position).toEqual(graph.nodes[i].position)
-    expect(n.data.select).toBe(graph.nodes[i].data.select)
-    expect(n.data.enter).toBe(graph.nodes[i].data.enter)
-    expect(n.data.selected).toBe(graph.nodes[i].data.selected)
+  await act(async () => {
+    await Promise.resolve()
   })
-  expect(workflowOverlay(graph, projections, h.result.current, true)).toBe(
-    graph,
+  expect(h.result.current.status).toBe('focusing')
+  await h.focus()
+  expect(h.result.current.status).toBe('animating')
+  act(() => h.result.current.measure(1000))
+  act(() => vi.advanceTimersByTime(999))
+  expect(h.result.current.completedCount).toBe(0)
+  h.complete()
+  expect(h.result.current.status).toBe('waiting')
+  act(() => vi.advanceTimersByTime(60000))
+  expect(h.result.current.index).toBe(0)
+  expect(h.result.current.completedCount).toBe(1)
+})
+
+it('navigates then focuses before one signal; repeated clicks cannot skip steps', async () => {
+  const h = setup('web')
+  h.open()
+  h.start()
+  expect(h.result.current.status).toBe('navigating')
+  expect(h.nav.goTo).toHaveBeenCalledWith(
+    undefined,
+    expect.any(AbortSignal),
+    expect.any(Array),
+  )
+  act(() => {
+    h.result.current.start()
+    h.result.current.next()
+    h.result.current.finish()
+  })
+  expect(h.result.current.index).toBe(0)
+  expect(h.result.current.completedCount).toBe(0)
+  await h.arrive()
+  expect(h.result.current.status).toBe('animating')
+  const staleFinish = h.result.current.finish
+  h.complete()
+  act(() => {
+    h.result.current.next()
+    h.result.current.next()
+    h.result.current.next()
+  })
+  expect(h.result.current.index).toBe(1)
+  expect(h.result.current.status).toBe('navigating')
+  expect(h.nav.goTo).toHaveBeenLastCalledWith(
+    'cloud',
+    expect.any(AbortSignal),
+    expect.any(Array),
+  )
+  act(() => staleFinish())
+  expect(h.result.current.completedCount).toBe(1)
+  await h.arrive('cloud')
+  h.complete()
+  expect(h.result.current.status).toBe('waiting')
+  expect(h.result.current.completedCount).toBe(2)
+})
+
+it('manual exploration while waiting preserves progress; Next targets the next interaction', async () => {
+  const h = setup()
+  h.open()
+  h.start()
+  await h.focus()
+  h.complete()
+  h.rerender({
+    navigation: { ...h.nav, parent: 'editor', navigating: true },
+    reduced: false,
+  })
+  act(() => h.result.current.next())
+  expect(h.result.current.index).toBe(0)
+  h.rerender({
+    navigation: { ...h.nav, parent: 'editor', navigating: false },
+    reduced: false,
+  })
+  act(() => vi.advanceTimersByTime(60000))
+  expect(h.result.current.status).toBe('waiting')
+  act(() => h.result.current.next())
+  expect(h.result.current.index).toBe(1)
+  expect(h.nav.goTo).toHaveBeenLastCalledWith(
+    'cloud',
+    expect.any(AbortSignal),
+    expect.any(Array),
   )
 })
 
-it('previews participation without a current step or signal and keeps unrelated navigation intact', () => {
+it.each(['navigating', 'focusing', 'animating'] as const)(
+  'close during %s cancels without stale completion',
+  async (phase) => {
+    const h = setup(phase === 'navigating' ? 'web' : undefined)
+    h.open()
+    h.start()
+    if (phase === 'animating') await h.focus()
+    const stale = h.result.current.finish
+    if (phase === 'animating') act(() => h.result.current.measure(5000))
+    act(() => h.result.current.close())
+    if (phase === 'navigating') {
+      expect(h.signal()?.aborted).toBe(true)
+      await h.arrive()
+    }
+    act(() => {
+      stale()
+      vi.advanceTimersByTime(60000)
+    })
+    expect(h.result.current.status).toBe('closed')
+    expect(h.result.current.highlighted).toBe(false)
+    expect(h.result.current.completedCount).toBe(0)
+  },
+)
+
+it('finishes, holds completion indefinitely and replays from step one', async () => {
   const h = setup()
+  h.open()
+  h.start()
+  await h.focus()
+  h.complete()
+  for (const parent of ['cloud', 'assets', 'assets', undefined]) {
+    act(() => h.result.current.next())
+    if (h.result.current.status === 'navigating') await h.arrive(parent)
+    else await h.focus()
+    h.complete()
+  }
+  expect(h.result.current.status).toBe('completed')
+  expect(h.result.current.completedCount).toBe(5)
+  act(() => vi.advanceTimersByTime(60000))
+  expect(h.result.current.highlighted).toBe(true)
+  act(() => h.result.current.start())
+  expect(h.result.current.index).toBe(0)
+  expect(h.result.current.completedCount).toBe(0)
+  await h.focus()
+  h.complete()
+  expect(h.result.current.status).toBe('waiting')
+})
+
+it('reduced motion uses a finite static action and still waits for Next', async () => {
+  const h = setup(undefined, true)
+  h.open()
+  h.start()
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
+  expect(h.result.current.status).toBe('animating')
+  act(() => vi.advanceTimersByTime(STATIC_DWELL))
+  expect(h.result.current.status).toBe('waiting')
+  expect(h.result.current.index).toBe(0)
+})
+
+it('handles a missing animation event and cancels navigation on unmount', async () => {
+  const h = setup()
+  h.open()
+  h.start()
+  await h.focus()
+  act(() => h.result.current.measure(1000))
+  act(() => vi.advanceTimersByTime(1100))
+  expect(h.result.current.status).toBe('waiting')
+  act(() => h.result.current.next())
+  h.unmount()
+  expect(h.signal()?.aborted).toBe(true)
+})
+
+it('surfaces invalid relationships instead of starting misleading navigation', () => {
+  const invalid = {
+    ...workflow,
+    steps: [{ ...workflow.steps[0], to: 'unknown' }],
+  }
+  const goTo = vi.fn(async () => true)
+  const h = renderHook(() =>
+    useWorkflow(invalid, architecture, { navigating: false, goTo }, false),
+  )
+  act(() => h.result.current.open())
+  act(() => h.result.current.start())
+  expect(h.result.current.status).toBe('error')
+  expect(h.result.current.error).toMatch(/unknown/)
+  expect(goTo).not.toHaveBeenCalled()
+})
+
+it('completes internal actions with a static highlight instead of inventing an edge', async () => {
+  const step = {
+    id: 'internal',
+    from: 'assets',
+    to: 'uploads',
+    kind: 'data' as const,
+  }
+  const model = createArchitecture({
+    components: [...architecture.components.values()],
+    relationships: [step],
+  })
+  const internal = { ...workflow, steps: [step] }
+  const goTo = vi.fn(async () => true)
+  const h = renderHook(() =>
+    useWorkflow(
+      internal,
+      model,
+      { parent: 'cloud', navigating: false, goTo },
+      false,
+    ),
+  )
+  act(() => h.result.current.open())
+  act(() => h.result.current.start())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(FOCUS_DWELL)
+  })
+  expect(h.result.current.current?.status).toBe('internal')
+  expect(h.result.current.status).toBe('animating')
   const graph = scene(
     buildWorld(false),
     'cloud',
     undefined,
-    'storage',
+    undefined,
     true,
     vi.fn(),
     vi.fn(),
   )
-  const lens = workflow.steps.map((s) => projectStep(s, architecture, 'cloud'))
-  act(() => h.result.current.open())
   const shown = workflowOverlay(
     graph,
-    lens,
+    [h.result.current.current!],
     h.result.current,
     false,
-    projectParticipation(workflow, architecture, 'cloud'),
-  )
-  expect(shown.nodes.filter((n) => n.data.emphasis === 'current')).toHaveLength(
-    0,
   )
   expect(shown.edges.some((e) => e.data?.signal)).toBe(false)
-  expect(shown.nodes.find((n) => n.id === 'assets')?.data.participation).toBe(
-    'contains',
+  expect(shown.nodes.find((n) => n.id === 'assets')?.data.emphasis).toBe(
+    'current',
   )
-  const storage = shown.nodes.find((n) => n.id === 'storage')!
-  expect(storage.data).toMatchObject({
+  act(() => vi.advanceTimersByTime(STATIC_DWELL))
+  expect(h.result.current.status).toBe('completed')
+})
+
+it('keeps lens geometry/navigation intact and separates active, completed and unrelated emphasis', async () => {
+  const h = setup('assets')
+  const graph = scene(
+    buildWorld(false),
+    'assets',
+    undefined,
+    'search',
+    true,
+    vi.fn(),
+    vi.fn(),
+  )
+  const projected = workflow.steps.map((s) =>
+    projectStep(s, architecture, 'assets'),
+  )
+  const participation = projectParticipation(workflow, architecture, 'assets')
+  h.open()
+  let shown = workflowOverlay(
+    graph,
+    projected,
+    h.result.current,
+    false,
+    participation,
+  )
+  expect(shown.edges.some((e) => e.data?.signal)).toBe(false)
+  const search = shown.nodes.find((n) => n.id === 'search')!
+  expect(search.data).toMatchObject({
     emphasis: 'dimmed',
-    participation: 'unrelated',
     interactive: true,
     selected: true,
   })
-  expect(storage.data.enter).toBe(
-    graph.nodes.find((n) => n.id === 'storage')!.data.enter,
+  expect(search.data.enter).toBe(
+    graph.nodes.find((n) => n.id === 'search')!.data.enter,
   )
-  act(() => h.result.current.close())
-  expect(workflowOverlay(graph, lens, h.result.current, false)).toBe(graph)
-})
-
-it('explicit Follow pause invalidates the old timer without advancing the current step', () => {
-  const h = setup()
-  act(() => h.result.current.start())
-  act(() => h.result.current.measure(1000))
-  act(() => vi.advanceTimersByTime(800))
-  act(() => h.result.current.pause())
-  act(() => vi.advanceTimersByTime(5000))
-  expect(h.result.current.status).toBe('paused')
-  expect(h.result.current.index).toBe(0)
-  act(() => h.result.current.resume())
-  act(() => h.result.current.measure(1000))
-  act(() => vi.advanceTimersByTime(1600))
-  expect(h.result.current.index).toBe(1)
+  const mock = {
+    ...h.result.current,
+    status: 'animating' as const,
+    index: 2,
+    completedCount: 2,
+    current: projected[2],
+  }
+  shown = workflowOverlay(graph, projected, mock, false, participation)
+  expect(shown.edges.filter((e) => e.data?.signal).map((e) => e.id)).toEqual([
+    'uploads/event/processing',
+  ])
+  shown = workflowOverlay(
+    graph,
+    projected,
+    { ...mock, status: 'waiting', completedCount: 3 },
+    false,
+    participation,
+  )
+  expect(shown.edges.some((e) => e.data?.signal)).toBe(false)
+  expect(
+    shown.edges.find((e) => e.id === 'uploads/event/processing')?.data
+      ?.emphasis,
+  ).toBe('done')
+  shown.nodes.forEach((n, i) =>
+    expect(n.position).toEqual(graph.nodes[i].position),
+  )
 })

@@ -43,7 +43,7 @@ Examples:
 - Save changes.
 - Share a document.
 
-A workflow highlights the relevant components and connections while leaving unrelated architecture visible but less prominent. Animated dots appear only on relationships involved in the selected workflow, following its logical execution sequence. Playback ends when the workflow finishes.
+A workflow highlights the relevant components and connections while leaving unrelated architecture visible but less prominent. Start and Next each explain one logical interaction: navigate to its context, focus the participants, animate one signal, then hold. The user decides when the next step happens. Completion never loops.
 
 Workflows use the same architecture map and Semantic Zoom navigation.
 
@@ -145,7 +145,7 @@ Zooming changes the amount of detail shown, not the underlying workflow.
 
 The user should be able to explore an operation at different architectural levels while preserving its logical context and progress.
 
-**The user explores the system; the workflow guides, but never takes control.** Follow is an explicit user action. It navigates through the shared hierarchy to the nearest useful context, preserves the current step, and leaves playback paused until the user continues.
+**The user explores the system; the workflow guides, but never takes control.** Start and Next explicitly authorize navigation to one interaction through the shared hierarchy. Camera movement finishes before a signal begins. Between completed steps, manual exploration preserves workflow progress; the next action finds the next interaction from the user's current location.
 
 ### P11 — Traffic Awareness Without Clutter
 

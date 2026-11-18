@@ -13,6 +13,7 @@ export function scene(
   explored: boolean,
   select: (id: string) => void,
   enter: (id: string) => void,
+  interactionLocked = false,
 ) {
   const nodes = new Map<string, MapNode>()
   const edges: MapEdge[] = []
@@ -32,7 +33,7 @@ export function scene(
         vertical: world.vertical,
         shell,
         exposure,
-        interactive: !journey && shell === 'closed',
+        interactive: !journey && !interactionLocked && shell === 'closed',
         selected: selected === id,
         showHint: !explored && selected === id && !journey,
         select,

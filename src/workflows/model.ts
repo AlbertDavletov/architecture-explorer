@@ -3,6 +3,7 @@ import type { architecture, SignalKind } from '../model/architecture'
 export type ArchitectureModel = typeof architecture
 export interface WorkflowStep {
   id: string
+  name?: string
   from: string
   to: string
   kind: SignalKind
@@ -57,6 +58,7 @@ export function parseWorkflow(
       !text(step.id) ||
       !text(step.from) ||
       !text(step.to) ||
+      (step.name !== undefined && !text(step.name)) ||
       !['request', 'data', 'event'].includes(String(step.kind)) ||
       (step.description !== undefined && !text(step.description))
     )
