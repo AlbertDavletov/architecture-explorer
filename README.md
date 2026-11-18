@@ -17,7 +17,7 @@ Open the local URL printed by Vite. `npm run build` type-checks and creates the 
 
 Start with **Clients** and **Cloud**. Click Cloud to select it, then scroll or pinch inward, or click its magnifier. Its outline grows around **App services** and **Storage**. The magnifier is a separate button, accessible with Tab and Enter or Space. The scroll hint retires after the first completed entry in the tab session. Hover over a leaf for its description.
 
-Drag the background to pan. Click empty canvas to clear the selection and zoom within the current graph's useful range. Immediately after entry, zooming out returns to the saved parent view. Breadcrumbs navigate smoothly to any ancestor. At the root, **System overview** recenters the map.
+Drag the background to pan. Click empty canvas to clear the selection and zoom within the current graph's useful range. Zooming out beyond the useful range returns to the saved parent view regardless of selection. Breadcrumbs navigate smoothly to any ancestor. At the root, **System overview** recenters the map.
 
 Use Tab to focus a card and Enter or Space to select it. Press Enter on a selected expandable card to explore it. Esc clears a selected card or returns one level when inside a component.
 
@@ -34,7 +34,11 @@ Add interactions to `relationships` using `from`, `to`, and one of `request`, `d
 - [Layout](src/graph/layout.ts) assigns each component a stable rectangle in a common world. Child groups have smaller drawing units and share their parent's center. Narrow canvases stack siblings vertically.
 - [Semantic zoom](src/graph/useSemanticZoom.ts) saves the viewport on entry. Icon, keyboard, and wheel entry share one action. The same camera controller handles returns and breadcrumbs. Immediate transitions take 570 ms. Multi-level returns use one 690 ms camera movement, progressively revealing adjacent groups along the route.
 - Zoom limits derive from the visible group's bounds, available viewport area, and component drawing scale. Framing aims for readable labels and reasonable margins. The minimum permits a little extra breathing room. The maximum caps card enlargement and spacing. Resizing recalculates the limits and saved views. Crowded graphs can be panned at a readable scale.
-- Gesture intent is tracked separately from camera scale, so a selected expandable card remains enterable at the upper limit. Inward intent equivalent to 143% enters it, and outward intent below 72% with an expandable component selected returns one level. A short quiet period absorbs momentum after navigation. Breadcrumb changes and shell visibility use the camera's animation clock.
+- Gesture intent is tracked separately from camera scale, so a selected expandable card remains enterable at the upper limit. Inward intent equivalent to 143% enters it, and outward intent below 72% at the lower zoom boundary returns one level regardless of selection. A short quiet period absorbs momentum after navigation. Breadcrumb changes and shell visibility use the camera's animation clock.
 - [Projection](src/model/architecture.ts) merges relationships by visible endpoints, direction, and signal type. The [scene](src/graph/scene.ts) mounts the focused siblings and their boundary, plus the adjacent group during a transition. [Signals](src/graph/SignalEdge.tsx) use a shared clock to preserve their phase across visits.
 
 The sample contains three levels and two siblings per area. Deterministic layout and edge routing are designed for small groups.
+
+## Regression tests
+
+Run npm test for architecture projection, viewport calculations, navigation lifecycle, gesture blocking, resize, reduced motion, and component interaction tests. Tests use Vitest, React Testing Library, and jsdom.

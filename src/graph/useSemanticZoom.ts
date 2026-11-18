@@ -253,13 +253,23 @@ export function useSemanticZoom(
       return true
     }
     function navigate(factor: number) {
-      if (!selected || !children(selected).length) return false
       const ratio = intent.current * factor
-      if (factor > 1 && selected !== parent && ratio >= 1.43) {
+      if (
+        factor > 1 &&
+        selected &&
+        children(selected).length &&
+        selected !== parent &&
+        ratio >= 1.43
+      ) {
         enter(selected, beforeGesture.current)
         return true
       }
-      if (factor < 1 && parent && ratio <= 0.72) {
+      if (
+        factor < 1 &&
+        parent &&
+        ratio <= 0.72 &&
+        flow.getZoom() * factor <= bounds.minZoom
+      ) {
         back(components.get(parent)?.parent)
         return true
       }
