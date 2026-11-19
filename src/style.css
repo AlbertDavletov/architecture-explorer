@@ -254,8 +254,26 @@ button:focus-visible {
 .inspect-component:active {
   background: var(--line);
 }
-.selected.closed:has(.enter-component, .inspect-component) .node-card {
+.selected.closed:has(.enter-component) .node-card {
   padding-right: 44px;
+}
+.inspect-component {
+  right: 7px;
+  width: 40px;
+  height: 40px;
+  color: #738393;
+}
+.selected .inspect-component,
+.inspect-component:hover,
+.inspect-component:focus-visible {
+  color: var(--ink);
+}
+.closed:has(.inspect-component) .node-card {
+  padding-right: 50px;
+}
+.closed:has(.inspect-component) .node-card strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .node-card strong {
   font-size: 18px;

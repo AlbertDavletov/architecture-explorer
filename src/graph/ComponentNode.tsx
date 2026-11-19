@@ -143,7 +143,7 @@ export function ComponentNode({ data }: NodeProps<MapNode>) {
               <Icon name="zoomIn" size={17} />
             </button>
           )}
-          {interactive && selected && !count && data.inspect && (
+          {interactive && !count && data.inspect && (
             <button
               type="button"
               className="inspect-component nopan nodrag"
@@ -154,7 +154,7 @@ export function ComponentNode({ data }: NodeProps<MapNode>) {
                 data.inspect?.(event.currentTarget)
               }}
             >
-              <Icon name="info" size={18} />
+              <Icon name="info" size={16} />
             </button>
           )}
         </div>

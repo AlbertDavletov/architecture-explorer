@@ -64,36 +64,49 @@ it('does not suggest entry for leaves', () => {
   expect(h.select).toHaveBeenCalledWith('files')
 })
 
-it('offers explicit inspection only on selected, interactive leaves with details', () => {
-  const h = mount('processing', 'assets')
-  const inspect = vi.fn()
-  const data = {
-    ...h.props.data,
-    inspect: getComponentDetails('processing') ? inspect : undefined,
-  }
-  h.rerender(<ComponentNode {...h.props} data={data} />)
-  fireEvent.click(screen.getByRole('button', { name: 'Processing' }))
-  expect(inspect).not.toHaveBeenCalled()
-  expect(
-    screen.queryByRole('button', { name: 'Inspect Processing' }),
-  ).toBeNull()
-  h.rerender(<ComponentNode {...h.props} data={{ ...data, selected: true }} />)
-  const info = screen.getByRole('button', { name: 'Inspect Processing' })
-  expect(info.getAttribute('aria-haspopup')).toBe('dialog')
-  fireEvent.click(info)
-  expect(inspect).toHaveBeenCalledWith(info)
-  expect(h.select).toHaveBeenCalledTimes(1)
-  expect(h.enter).not.toHaveBeenCalled()
-  h.rerender(
-    <ComponentNode
-      {...h.props}
-      data={{ ...data, selected: true, interactive: false }}
-    />,
-  )
-  expect(
-    screen.queryByRole('button', { name: 'Inspect Processing' }),
-  ).toBeNull()
-})
+it.each([
+  ['processing', 'assets', 'Processing'],
+  ['records', 'storage', 'Records'],
+  ['compositor', 'rendering', 'Composition'],
+  ['notifications', 'cloud', 'Notifications'],
+])(
+  'offers direct inspection on unselected interactive leaf %s',
+  (id, parent, name) => {
+    const h = mount(id, parent)
+    const inspect = vi.fn()
+    const data = {
+      ...h.props.data,
+      inspect: getComponentDetails(id) ? inspect : undefined,
+    }
+    h.rerender(<ComponentNode {...h.props} data={data} />)
+    const info = screen.getByRole('button', { name: `Inspect ${name}` })
+    expect(info.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(info.classList.contains('nopan')).toBe(true)
+    expect(info.classList.contains('nodrag')).toBe(true)
+    info.focus()
+    expect(document.activeElement).toBe(info)
+    fireEvent.click(info)
+    expect(inspect).toHaveBeenCalledWith(info)
+    expect(h.select).not.toHaveBeenCalled()
+    expect(h.enter).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name }))
+    expect(h.select).toHaveBeenCalledWith(id)
+    expect(inspect).toHaveBeenCalledTimes(1)
+    h.rerender(
+      <ComponentNode {...h.props} data={{ ...data, selected: true }} />,
+    )
+    expect(screen.getByRole('button', { name: `Inspect ${name}` })).toBe(info)
+    h.rerender(<ComponentNode {...h.props} data={data} />)
+    expect(screen.getByRole('button', { name: `Inspect ${name}` })).toBe(info)
+    h.rerender(
+      <ComponentNode
+        {...h.props}
+        data={{ ...data, selected: true, interactive: false }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: `Inspect ${name}` })).toBeNull()
+  },
+)
 
 it('never offers inspection on a parent, even if an inspect callback is supplied', () => {
   const h = mount('assets', 'cloud', 'assets')

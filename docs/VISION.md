@@ -165,7 +165,7 @@ Only present quantitative values when the underlying metric and measurement peri
 
 Keep the main canvas free from low-level technical labels such as GET, POST, AUTH, and protocol names.
 
-Detailed information can be accessed by selecting a component, connection, or workflow step.
+Detailed information belongs in explicit contextual actions rather than labels on the map.
 
 ### P13 — Architecture and Behavior Are Separate Models
 
@@ -200,7 +200,7 @@ Component Inspector presents metadata explicitly supplied by the architecture au
 
 ### P17 — Leaf Components Only
 
-Only terminal components with valid authored details expose Inspector. Containers keep their zoom affordance. A selected leaf without details has no extra action. Selection alone never opens Inspector: a small contextual info button is the explicit entry point.
+Only terminal components with valid authored details expose Inspector. Their subtle info action is visible whenever the component is visible and interactive, regardless of selection. Containers remain architectural navigation elements and never expose Inspector. A leaf without configured details has no info action. Clicking the info button opens details directly; clicking the card body only selects.
 
 ### P18 — Details Stay Outside the Canvas
 
@@ -208,11 +208,15 @@ Use a compact floating dialog on desktop and a scrollable bottom sheet on mobile
 
 ### P19 — Context Preservation
 
-Opening and closing Inspector preserves the architectural level, camera, zoom, selection, history and workflow progress. Close or Escape restores keyboard focus. While open, the dialog owns interaction; closing resumes exploration or guided steps. Its action is unavailable during guided navigation and signal playback. Inspector does not introduce a navigation mode or change Semantic Zoom.
+Opening Inspector from an unselected component must not select it or clear another selection. Opening and closing preserve the architectural level, camera, zoom, breadcrumbs, selection (including no selection), history and workflow state. Close or Escape restores keyboard focus. While open, the dialog owns interaction; closing resumes exploration or guided steps. Its action is unavailable during guided navigation, focus and signal playback. Inspector does not introduce a navigation mode or change Semantic Zoom.
 
 ### P20 — Public Demo Safety
 
 The public demo uses fictional Loom metadata and team names, with no employer-specific architecture, private URLs, people, secrets or proprietary documentation. Use actual public destinations clearly labeled for their purpose, or omit links. Flags and metrics explain possible concepts; they do not imply live integrations.
+
+### P21 — Discoverability Before Interaction
+
+Users should recognize which components have additional information without selecting each one first. Progressive Disclosure hides detailed content, not its existence. Keep the info affordance subtle, visible and consistent; details remain hidden until explicitly requested.
 
 ---
 

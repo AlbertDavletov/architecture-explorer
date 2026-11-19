@@ -122,9 +122,7 @@ function Map({
       data: {
         ...node.data,
         inspect:
-          node.data.interactive &&
-          node.data.selected &&
-          getComponentDetails(node.id)
+          node.data.interactive && getComponentDetails(node.id)
             ? (trigger: HTMLButtonElement) =>
                 setInspected({ id: node.id, trigger })
             : undefined,
