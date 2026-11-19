@@ -1,0 +1,62 @@
+{
+  "components": {
+    "processing": {
+      "summary": "In fictional Loom, prepares image previews and thumbnails after an upload.",
+      "owner": "Loom Media Team (fictional)",
+      "source": {
+        "title": "Loom demo fixture",
+        "url": "https://github.com/AlbertDavletov/architecture-explorer/blob/main/src/model/architecture.json"
+      },
+      "documentation": [
+        {
+          "title": "Architecture Explorer demo guide",
+          "url": "https://github.com/AlbertDavletov/architecture-explorer/blob/main/README.md"
+        }
+      ],
+      "usedBy": ["uploads", "catalog"],
+      "featureFlags": [
+        {
+          "name": "compact-previews",
+          "description": "Illustrative flag for generating smaller previews. This demo does not evaluate flags."
+        }
+      ],
+      "metrics": [
+        {
+          "name": "Previews prepared",
+          "description": "An example count of completed previews; no live measurement is collected."
+        }
+      ],
+      "tests": [
+        {
+          "title": "Demo workflow validation tests",
+          "url": "https://github.com/AlbertDavletov/architecture-explorer/blob/main/src/workflows/catalog.test.ts"
+        }
+      ],
+      "resources": [
+        {
+          "title": "Architecture Explorer product vision",
+          "url": "https://github.com/AlbertDavletov/architecture-explorer/blob/main/docs/VISION.md"
+        }
+      ]
+    },
+    "records": {
+      "summary": "Keeps the saved document model in the fictional Loom system.",
+      "owner": "Loom Documents Team (fictional)",
+      "usedBy": ["gateway"]
+    },
+    "compositor": {
+      "summary": "Combines rendered layers into a document preview in this fictional editor."
+    },
+    "notifications": {
+      "summary": "Delivers illustrative save confirmations and collaboration updates in Loom.",
+      "owner": "Loom Collaboration Team (fictional)",
+      "usedBy": ["ui"],
+      "metrics": [
+        {
+          "name": "Updates delivered",
+          "description": "An example delivery count, not a live counter."
+        }
+      ]
+    }
+  }
+}

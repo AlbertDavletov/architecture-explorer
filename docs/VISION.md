@@ -194,6 +194,26 @@ Only render and emphasize what is necessary for the current level and selected t
 
 Optimize for human comprehension rather than displaying the maximum possible information.
 
+### P16 — Optional Details
+
+Component Inspector presents metadata explicitly supplied by the architecture author. Details are optional; never generate placeholder ownership, links, flags or metrics. Authors attach entries by component ID in a separate details JSON. Supported fields include summary, owner, source code, documentation, consumer component IDs, feature flags, metric descriptions, tests and related resources. Only populated, valid sections appear.
+
+### P17 — Leaf Components Only
+
+Only terminal components with valid authored details expose Inspector. Containers keep their zoom affordance. A selected leaf without details has no extra action. Selection alone never opens Inspector: a small contextual info button is the explicit entry point.
+
+### P18 — Details Stay Outside the Canvas
+
+Use a compact floating dialog on desktop and a scrollable bottom sheet on mobile. Keep technical information outside the graph; use simple content and progressive disclosure rather than dashboards, tabs or raw configuration.
+
+### P19 — Context Preservation
+
+Opening and closing Inspector preserves the architectural level, camera, zoom, selection, history and workflow progress. Close or Escape restores keyboard focus. While open, the dialog owns interaction; closing resumes exploration or guided steps. Its action is unavailable during guided navigation and signal playback. Inspector does not introduce a navigation mode or change Semantic Zoom.
+
+### P20 — Public Demo Safety
+
+The public demo uses fictional Loom metadata and team names, with no employer-specific architecture, private URLs, people, secrets or proprietary documentation. Use actual public destinations clearly labeled for their purpose, or omit links. Flags and metrics explain possible concepts; they do not imply live integrations.
+
 ---
 
 ## 3. Product Experience

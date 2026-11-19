@@ -20,6 +20,8 @@ import { projectStep, projectParticipation } from './workflows/projection'
 import { useWorkflow } from './workflows/useWorkflow'
 import { workflowOverlay } from './workflows/overlay'
 import { WorkflowControl } from './workflows/WorkflowControl'
+import { getComponentDetails } from './inspector/details'
+import { ComponentInspector } from './inspector/ComponentInspector'
 
 const workflowCatalog = (() => {
   try {
@@ -60,6 +62,10 @@ function Map({
   const nav = useSemanticZoom(world, size, reduced, canvas, manualLocked)
   const [pickerOpen, setPickerOpen] = useState(false)
   const [workflowId, setWorkflowId] = useState<string>()
+  const [inspected, setInspected] = useState<{
+    id: string
+    trigger: HTMLButtonElement
+  }>()
   const workflow = workflowCatalog.workflows.find(
     (item) => item.id === workflowId,
   )
@@ -102,23 +108,45 @@ function Map({
       playback.busy,
     ],
   )
-  const graph = workflowOverlay(
+  const overlay = workflowOverlay(
     baseGraph,
     projections,
     playback,
     nav.navigating,
     participation,
   )
+  const graph = {
+    ...overlay,
+    nodes: overlay.nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        inspect:
+          node.data.interactive &&
+          node.data.selected &&
+          getComponentDetails(node.id)
+            ? (trigger: HTMLButtonElement) =>
+                setInspected({ id: node.id, trigger })
+            : undefined,
+      },
+    })),
+  }
   const path = ancestry(nav.parent)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || e.defaultPrevented || playback.busy) return
+      if (
+        e.key !== 'Escape' ||
+        e.defaultPrevented ||
+        playback.busy ||
+        inspected
+      )
+        return
       if (nav.selected && nav.selected !== nav.parent) nav.select()
       else if (nav.parent) nav.back(components.get(nav.parent)?.parent)
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [nav.selected, nav.parent, nav.back, nav.select, playback.busy])
+  }, [nav.selected, nav.parent, nav.back, nav.select, playback.busy, inspected])
   return (
     <>
       <ReactFlow<MapNode, MapEdge>
@@ -189,6 +217,14 @@ function Map({
         playback={playback}
         navigating={nav.navigating}
       />
+      {inspected && (
+        <ComponentInspector
+          component={components.get(inspected.id)!}
+          details={getComponentDetails(inspected.id)!}
+          trigger={inspected.trigger}
+          onClose={() => setInspected(undefined)}
+        />
+      )}
       <div className="legend" aria-label="Illustrative signals">
         {[
           ['request', 'Requests'],

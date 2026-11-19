@@ -25,6 +25,38 @@ The default Architecture view is static. Blue connections represent requests, gr
 
 ## Edit the fixture
 
+### Component Inspector (v0.8)
+
+Select **Processing**, **Records**, **Composition** or **Notifications**, then use the small info button to open details. A normal click still only selects. Expandable components keep their zoom action; unconfigured leaves such as Search and Files have no extra action.
+
+Inspector is a compact floating dialog beside the selected component when space permits, with an edge fallback. On mobile it becomes a scrollable bottom sheet. It never resizes or reframes the map. Close or Escape restores focus to the info button and preserves selection, viewport, navigation history and workflow progress. The native modal keeps keyboard focus inside and makes the underlying controls temporarily unavailable: close it to continue exploring or use Start/Next. Inspection is unavailable during guided navigation, focus or signals. The dialog is mounted outside the canvas so its scrolling and touch gestures cannot reach Semantic Zoom listeners.
+
+Metadata lives separately in [src/inspector/details.json](src/inspector/details.json), keyed by existing component IDs:
+
+```json
+{
+  "components": {
+    "records": {
+      "summary": "Keeps saved document models in fictional Loom.",
+      "owner": "Loom Documents Team (fictional)",
+      "usedBy": ["gateway"]
+    }
+  }
+}
+```
+
+All fields are optional. Supported fields are `summary`, `owner`, `source: {title, url}`, `documentation`, `tests` and `resources` (arrays of `{title, url}`), `usedBy` (component IDs), and `featureFlags` / `metrics` (arrays of `{name, description?}`). Optional sections are collapsed initially; empty sections are omitted. Flags and metrics are explanatory descriptions, not controls or live values.
+
+[getComponentDetails](src/inspector/details.ts) exposes only valid, explicitly configured leaves. Unknown IDs, parent entries, empty metadata, malformed fields, unknown consumer IDs and unsafe links make that entry unavailable without breaking other components. Links must be absolute HTTP(S) URLs without credentials or whitespace; external links open with `noopener noreferrer`. No placeholder metadata is generated. Component description is the authored fallback when an eligible entry omits its summary.
+
+All demo ownership and behavior are fictional. The few links point to this public demo's actual fixture, guide, vision and tests, clearly labeled as demo resources; they do not pretend to be repositories for real Loom services. Omit source/documentation links when no real public destination exists. The graph receives only eligibility and an open callback, never the metadata objects. Semantic Zoom, workflow definitions and architectural structure remain independent of Inspector.
+
+v0.8 validation: **154 tests passed across 18 files**, and `npm run build` passed. Production Chromium at 1440 × 900 and 390 × 844 exercised all four configured leaves, unconfigured leaves and parent exclusion, optional sections, safe links, keyboard/Escape/focus restoration, exact viewport and selection preservation (including a panned view), and scroll/touch isolation. The mobile sheet remained bounded and scrollable at 320 × 480. Upload an image completed with inspection in Preview and between steps; Inspector actions were absent during playback. Reduced motion and ordinary navigation regressions passed, the latter at four screen sizes. A local WebM demo was recorded; no browser console errors were observed.
+
+Limits: local authored metadata only, no editing, live metrics or flag evaluation. Inspector is modal, so close it before navigating or continuing a workflow. Chromium was tested; physical touch devices, screen readers and other browsers still need evaluation.
+
+### Structural data
+
 Edit [src/model/architecture.json](src/model/architecture.json). Give each component a unique ID, name, description, icon, and color. Omit `parent` for a top-level component or use its parent's ID. Keep parent links acyclic. Sibling order in the file determines placement.
 
 Add interactions to `relationships` using `from`, `to`, and one of `request`, `data`, or `event`. Reference the most specific components involved. For example, a request from `pages` to `gateway` contributes to the Clients → Cloud signal in the overview.
