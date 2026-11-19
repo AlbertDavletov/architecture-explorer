@@ -357,6 +357,10 @@ button:focus-visible {
   border: 2px solid #50667b;
   box-shadow: 0 0 0 2px #e4e9ee;
 }
+.node-unit.arriving.closed .shell-outline {
+  border: 2px solid #344d63;
+  box-shadow: 0 0 0 3px #dce4eb;
+}
 .shell-outline {
   transition:
     border-color 180ms ease,

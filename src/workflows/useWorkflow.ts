@@ -29,9 +29,11 @@ interface State {
   target?: string
   focusIds?: string[]
   error?: string
+  arrival?: { component: string; parent?: string }
 }
 export const FOCUS_DWELL = 180
 export const STATIC_DWELL = 600
+export const ARRIVAL_HOLD = 420
 const active = (s: WorkflowStatus) =>
   ['navigating', 'focusing', 'animating'].includes(s)
 
@@ -146,12 +148,39 @@ export function useWorkflow(
   const finish = useCallback(() => {
     const s = live.current
     if (s.run !== state.run || s.status !== 'animating') return
+    const projection = workflow
+      ? projectStep(workflow.steps[s.index], model, nav.current.parent)
+      : undefined
+    const destination =
+      projection?.status === 'visible'
+        ? projection.to
+        : projection?.status === 'internal'
+          ? projection.component
+          : undefined
     publish({
       ...s,
+      arrival: destination
+        ? { component: destination, parent: nav.current.parent }
+        : undefined,
       completedCount: s.index + 1,
       status: s.index + 1 === workflow?.steps.length ? 'completed' : 'waiting',
     })
-  }, [state.run, workflow, publish])
+  }, [state.run, workflow, model, publish])
+
+  useEffect(() => {
+    const arrival = state.arrival
+    if (!arrival) return
+    const clear = () => {
+      if (live.current.arrival === arrival)
+        publish({ ...live.current, arrival: undefined })
+    }
+    if (navigation.navigating || navigation.parent !== arrival.parent) {
+      clear()
+      return
+    }
+    const timer = window.setTimeout(clear, ARRIVAL_HOLD)
+    return () => clearTimeout(timer)
+  }, [state.arrival, navigation.navigating, navigation.parent, publish])
   const measure = useCallback(
     (duration: number) => {
       if (

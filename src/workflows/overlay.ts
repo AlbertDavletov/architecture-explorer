@@ -38,6 +38,9 @@ export function workflowOverlay(
       data: {
         ...n.data,
         participation: participation?.get(n.id),
+        arriving:
+          (playback.status === 'waiting' || playback.status === 'completed') &&
+          playback.arrival?.component === n.id,
         emphasis: (active?.nodes.includes(n.id)
           ? 'current'
           : doneNodes.has(n.id)

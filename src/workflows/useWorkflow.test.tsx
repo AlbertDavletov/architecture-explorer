@@ -7,12 +7,14 @@ import { projectStep, projectParticipation } from './projection'
 import {
   FOCUS_DWELL,
   STATIC_DWELL,
+  ARRIVAL_HOLD,
   useWorkflow,
   type WorkflowNavigation,
 } from './useWorkflow'
 import { workflowOverlay } from './overlay'
 import { scene } from '../graph/scene'
 import { buildWorld } from '../graph/layout'
+import { workflowSignalDuration } from './signalDuration'
 
 const workflow = parseWorkflow(raw, architecture)
 beforeEach(() => vi.useFakeTimers())
@@ -229,12 +231,111 @@ it('handles a missing animation event and cancels navigation on unmount', async 
   h.open()
   h.start()
   await h.focus()
-  act(() => h.result.current.measure(1000))
-  act(() => vi.advanceTimersByTime(1100))
+  const duration = workflowSignalDuration(516)
+  act(() => h.result.current.measure(duration))
+  act(() => vi.advanceTimersByTime(duration - 1))
+  expect(h.result.current.status).toBe('animating')
+  expect(h.result.current.arrival).toBeUndefined()
+  act(() => vi.advanceTimersByTime(101))
   expect(h.result.current.status).toBe('waiting')
   act(() => h.result.current.next())
   h.unmount()
   expect(h.signal()?.aborted).toBe(true)
+})
+
+it('confirms only the destination after arrival, then retains quiet completed emphasis', async () => {
+  const h = setup()
+  const graph = scene(
+    buildWorld(false),
+    undefined,
+    undefined,
+    undefined,
+    true,
+    vi.fn(),
+    vi.fn(),
+  )
+  const projections = workflow.steps.map((s) => projectStep(s, architecture))
+  const shown = () =>
+    workflowOverlay(graph, projections, h.result.current, false)
+  h.open()
+  h.start()
+  await h.focus()
+  expect(shown().nodes.some((n) => n.data.arriving)).toBe(false)
+  h.complete()
+  expect(h.result.current.status).toBe('waiting')
+  expect(h.result.current.busy).toBe(false)
+  expect(
+    shown()
+      .nodes.filter((n) => n.data.arriving)
+      .map((n) => n.id),
+  ).toEqual(['cloud'])
+  act(() => vi.advanceTimersByTime(ARRIVAL_HOLD))
+  expect(shown().nodes.some((n) => n.data.arriving)).toBe(false)
+  expect(
+    shown().edges.find((e) => e.id === 'clients/request/cloud')?.data?.emphasis,
+  ).toBe('done')
+  act(() => vi.advanceTimersByTime(10000))
+  expect(h.result.current.index).toBe(0)
+})
+
+it('clears arrival on Next or manual navigation, without a stale timer clearing a newer arrival', async () => {
+  const h = setup()
+  h.open()
+  h.start()
+  await h.focus()
+  h.complete()
+  const staleFinish = h.result.current.finish
+  act(() => h.result.current.next())
+  expect(h.result.current.arrival).toBeUndefined()
+  await h.arrive('cloud')
+  act(() => staleFinish())
+  expect(h.result.current.arrival).toBeUndefined()
+  h.complete()
+  expect(h.result.current.arrival?.component).toBe('assets')
+  act(() => vi.advanceTimersByTime(ARRIVAL_HOLD - 1))
+  expect(h.result.current.arrival?.component).toBe('assets')
+  h.rerender({
+    navigation: { ...h.nav, parent: 'cloud', navigating: true },
+    reduced: false,
+  })
+  expect(h.result.current.arrival).toBeUndefined()
+  h.rerender({
+    navigation: { ...h.nav, parent: 'cloud', navigating: false },
+    reduced: false,
+  })
+  expect(h.result.current.arrival).toBeUndefined()
+  expect(h.result.current.status).toBe('waiting')
+})
+
+it('Replay and Close clear arrival and callbacks from the previous run', async () => {
+  const single = { ...workflow, steps: [workflow.steps[0]] }
+  const navigation = { navigating: false, goTo: vi.fn(async () => true) }
+  const h = renderHook(() =>
+    useWorkflow(single, architecture, navigation, false),
+  )
+  act(() => h.result.current.open())
+  act(() => h.result.current.start())
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(FOCUS_DWELL)
+  })
+  const staleFinish = h.result.current.finish
+  act(() => h.result.current.finish())
+  expect(h.result.current.status).toBe('completed')
+  expect(h.result.current.arrival?.component).toBe('cloud')
+  act(() => h.result.current.start())
+  expect(h.result.current.arrival).toBeUndefined()
+  expect(h.result.current.completedCount).toBe(0)
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(FOCUS_DWELL)
+  })
+  act(() => staleFinish())
+  expect(h.result.current.status).toBe('animating')
+  act(() => h.result.current.finish())
+  expect(h.result.current.arrival).toBeDefined()
+  act(() => h.result.current.close())
+  act(() => vi.advanceTimersByTime(10000))
+  expect(h.result.current.arrival).toBeUndefined()
+  expect(h.result.current.status).toBe('closed')
 })
 
 it('surfaces invalid relationships instead of starting misleading navigation', () => {

@@ -20,6 +20,7 @@ export type MapNode = Node<
     showHint: boolean
     emphasis?: Emphasis
     participation?: Participation
+    arriving?: boolean
     select: (id: string) => void
     enter: (id: string) => void
   },
@@ -65,7 +66,7 @@ export function ComponentNode({ data }: NodeProps<MapNode>) {
         isConnectable={false}
       />
       <div
-        className={`node-unit ${component.color} ${exposure} ${shell}${selected ? ' selected' : ''} ${data.emphasis ?? ''} ${data.participation ?? ''}`}
+        className={`node-unit ${component.color} ${exposure} ${shell}${selected ? ' selected' : ''} ${data.emphasis ?? ''} ${data.participation ?? ''}${data.arriving ? ' arriving' : ''}`}
         style={styles}
       >
         <div className="node-visual">

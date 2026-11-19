@@ -67,7 +67,7 @@ Each action follows **Navigate → Focus → Signal → Hold**. A clearly visibl
 
 If manual panning moved an interaction off-screen at the correct level, the action gently reframes it before the signal. Already visible endpoints do not cause camera movement.
 
-After the camera arrives, a short 180 ms focus phase highlights the participants, then one signal traverses the real connection once at 42 sibling-local units/second. Blue means request, green data, orange event. Its arrival completes the step and enables Next. Completed interactions retain a quieter outline and connection emphasis. After the last step, **Completed** and **Replay** remain until closed; there is no looping or automatic reset.
+After the camera arrives, a short 180 ms focus phase highlights the participants, then one signal traverses the real connection once in 650–1800 ms, using an adaptive duration based on SVG path length. Blue means request, green data, orange event. Its arrival completes the step and enables Next immediately. The destination receives one restrained border emphasis for 420 ms, then returns to the quieter completed outline. The feedback clears on Next, Replay, Close or semantic navigation and never blocks exploration. Reduced motion uses a brief static border with no transition. Completed connections remain subtly emphasized. After the last step, **Completed** and **Replay** remain until closed; there is no looping or automatic reset.
 
 Between steps you can pan, zoom, use breadcrumbs and explore unrelated components. This does not change workflow progress. Next finds the next interaction from your new location. During the requested navigation/focus/signal action, graph interactions and Next are temporarily disabled so the camera and signal cannot compete; Close stays available. There are no Follow, Continue, Pause, speed or timeline controls.
 
@@ -105,9 +105,24 @@ Step names and descriptions are optional. Without a short name, the control fall
 
 [Projection](src/workflows/projection.ts) stays independent of playback and resolves logical component IDs to visible ancestors, real directed relationships, internal actions or out-of-view interactions. [The lens](src/workflows/overlay.ts) adds participation/current/completed emphasis without changing coordinates or introducing another graph engine. The architecture data model has no camera or workflow state.
 
-Known limits: one authored sequential scenario; no previous-step control, branching engine, real telemetry or cross-level signal travel. Long routes take longer at the fixed speed. Guided cancellation rolls back the camera rather than freezing between levels. Existing dense-routing crossings remain. Physical trackpad gestures and larger real architectures still need evaluation.
+Known limits: one authored sequential scenario; no previous-step control, branching engine, real telemetry or cross-level signal travel. Workflow timing is explanatory, not real latency; long routes are capped at 1800 ms. Guided cancellation rolls back the camera rather than freezing between levels. Existing dense-routing crossings remain. Physical trackpad gestures and larger real architectures still need evaluation.
 
-Validation: **79 tests passed** across 11 files, and `npm run build` passed. Chromium at 1440 × 900 and 390 × 844 completed all five user-paced steps, manual cross-branch exploration between steps, repeated Next clicks, replay, cancellation during camera/signal activity and reduced motion. Per-frame checks verified no signals during navigation/focus and no camera motion during a signal. Additional checks verified off-screen interactions reframe before animation. Existing deep-entry, breadcrumb, exact viewport restoration and wheel-navigation regressions passed at 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844. A local WebM recording captured the desktop journey.
+Validation: **90 tests passed** across 12 files, and `npm run build` passed. Chromium at 1440 × 900 and 390 × 844 completed all five user-paced steps, manual cross-branch exploration between steps, repeated Next clicks, replay, cancellation during camera/signal activity and reduced motion. Per-frame checks verified no signals during navigation/focus and no camera motion during a signal. Additional checks verified off-screen interactions reframe before animation. Existing deep-entry, breadcrumb, exact viewport restoration and wheel-navigation regressions passed at 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844. A local WebM recording captured the desktop journey.
+
+### Transition polish
+
+The workflow-only [duration helper](src/workflows/signalDuration.ts) uses `round(clamp(450 + 450 × ln(1 + length / 80), 650, 1800))` in sibling-local SVG units. Invalid lengths fall back to 650 ms. The renderer assigns this same value to CSS and reports it to the existing completion fallback, which waits an additional 100 ms if no animation-end event arrives. Native completion remains the primary signal; run tokens reject stale callbacks. No traffic-frequency calculation or user speed control is involved.
+
+Measured on the actual Loom routes in Chromium:
+
+| Longest route at viewport | Before | After |
+| --- | ---: | ---: |
+| 1440 × 900 — Uploads → Processing (516 units) | 12,286 ms | 1,354 ms |
+| 390 × 844 — App services → Assets (445 units) | 10,595 ms | 1,297 ms |
+
+All five native CSS animation durations matched the calculated values on desktop and mobile (650–1354 ms for these fixtures). Browser checks also verified that destination feedback begins after completion, appears only once, clears promptly, leaves Next enabled, and respects reduced motion. Camera-before-signal sequencing, Preview, manual cross-branch exploration, Replay and Close passed; ordinary navigation regressions passed at all four documented sizes.
+
+Guided camera timing is unchanged: 440 ms per adjacent boundary, with the existing 570–2400 ms bounds. The reviewed cross-branch route retains enough time to recognize the common overview and arrive comfortably. Removing the 10–12 second signal waits provides the responsiveness improvement without shortening that orientation interval or changing manual Semantic Zoom.
 
 ## Dense connections experiment (v0.5.1)
 
