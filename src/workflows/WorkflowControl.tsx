@@ -1,23 +1,41 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { components } from '../model/architecture'
 import type { Workflow } from './model'
 import type { WorkflowPlayback } from './useWorkflow'
 
 export function WorkflowControl({
+  workflows,
   workflow,
+  open,
+  onOpen,
+  onChoose,
+  onClose,
   error,
   playback: p,
   navigating,
 }: {
+  workflows: Workflow[]
   workflow?: Workflow
+  open: boolean
+  onOpen: () => void
+  onChoose: (id: string) => void
+  onClose: () => void
   error?: string
   playback: WorkflowPlayback
   navigating: boolean
 }) {
   const trigger = useRef<HTMLButtonElement>(null)
-  if (p.status === 'closed')
+  const selector = useRef<HTMLSelectElement>(null)
+  useEffect(() => {
+    if (open) selector.current?.focus()
+  }, [open])
+  const close = () => {
+    onClose()
+    requestAnimationFrame(() => trigger.current?.focus())
+  }
+  if (!open)
     return (
-      <button ref={trigger} className="workflow-trigger" onClick={p.open}>
+      <button ref={trigger} className="workflow-trigger" onClick={onOpen}>
         Workflows
       </button>
     )
@@ -33,14 +51,35 @@ export function WorkflowControl({
     <section
       className="workflow-control"
       aria-label="Guided workflow"
-      data-phase={p.status}
+      data-phase={workflow ? p.status : 'selecting'}
       aria-busy={p.busy}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          close()
+        }
+      }}
     >
       <div className="workflow-heading">
-        <strong title={workflow?.description}>
-          {workflow?.name ?? 'Workflows'}
-        </strong>
-        {!problem && (
+        <select
+          ref={selector}
+          className="workflow-select"
+          aria-label="Workflow"
+          value={workflow?.id ?? ''}
+          disabled={p.busy || navigating || !workflows.length}
+          onChange={(event) => onChoose(event.target.value)}
+        >
+          <option value="" disabled>
+            Choose a workflow
+          </option>
+          {workflows.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        {workflow && !problem && (
           <button
             className="workflow-start"
             disabled={p.busy || navigating}
@@ -52,10 +91,7 @@ export function WorkflowControl({
         <button
           aria-label="Close workflow"
           title="Close workflow"
-          onClick={() => {
-            p.close()
-            requestAnimationFrame(() => trigger.current?.focus())
-          }}
+          onClick={close}
         >
           ×
         </button>
@@ -63,6 +99,7 @@ export function WorkflowControl({
       {problem ? (
         <p role="alert">{problem}</p>
       ) : (
+        workflow &&
         p.status !== 'preview' && (
           <div
             className="workflow-status"

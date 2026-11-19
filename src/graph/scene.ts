@@ -1,3 +1,4 @@
+import { Position } from '@xyflow/react'
 import { components, project } from '../model/architecture'
 import type { World } from './layout'
 import type { Exposure, MapNode, Shell } from './ComponentNode'
@@ -26,6 +27,29 @@ export function scene(
       position: { x: place.box.x, y: place.box.y },
       width: place.box.width,
       height: place.box.height,
+      // The layout already knows these fixed anchors. Supplying them prevents
+      // controlled node updates (lens/phase changes) from clearing React Flow's
+      // handle bounds while waiting for an unrelated ResizeObserver delivery.
+      handles: [
+        {
+          id: 'out',
+          type: 'source',
+          position: world.vertical ? Position.Bottom : Position.Right,
+          x: world.vertical ? place.box.width / 2 : place.box.width,
+          y: world.vertical ? place.box.height : place.box.height / 2,
+          width: 0,
+          height: 0,
+        },
+        {
+          id: 'in',
+          type: 'target',
+          position: world.vertical ? Position.Top : Position.Left,
+          x: world.vertical ? place.box.width / 2 : 0,
+          y: world.vertical ? 0 : place.box.height / 2,
+          width: 0,
+          height: 0,
+        },
+      ],
       zIndex: shell === 'closed' ? 3 : shell === 'opening' ? 1 : 0,
       data: {
         component,

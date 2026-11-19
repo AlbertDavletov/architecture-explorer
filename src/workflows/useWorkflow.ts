@@ -216,14 +216,22 @@ export function useWorkflow(
     return () => clearTimeout(timer)
   }, [state.status, state.run, current?.status, measurement, reduced, finish])
 
+  // Call together with a workflow selection change. Keep the camera/context,
+  // but invalidate all callbacks and timers from the previous selection.
+  const preview = () => {
+    if (active(live.current.status) || nav.current.navigating) return false
+    controller.current?.abort()
+    setMeasurement(undefined)
+    publish({
+      status: 'preview',
+      index: 0,
+      run: live.current.run + 1,
+      completedCount: 0,
+    })
+    return true
+  }
   const open = () => {
-    if (live.current.status === 'closed')
-      publish({
-        status: 'preview',
-        index: 0,
-        run: live.current.run + 1,
-        completedCount: 0,
-      })
+    if (live.current.status === 'closed') preview()
   }
   const start = () => {
     if (
@@ -253,6 +261,7 @@ export function useWorkflow(
     highlighted: !!workflow && state.status !== 'closed',
     measure,
     finish,
+    preview,
     open,
     start,
     next,

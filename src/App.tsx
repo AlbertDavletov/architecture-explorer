@@ -15,8 +15,7 @@ import { buildWorld, type Size } from './graph/layout'
 import { scene } from './graph/scene'
 import { useSemanticZoom } from './graph/useSemanticZoom'
 import { Icon } from './ui/Icon'
-import uploadImage from './workflows/upload-image.json'
-import { parseWorkflow } from './workflows/model'
+import { createWorkflowCatalog } from './workflows/catalog'
 import { projectStep, projectParticipation } from './workflows/projection'
 import { useWorkflow } from './workflows/useWorkflow'
 import { workflowOverlay } from './workflows/overlay'
@@ -25,12 +24,12 @@ import { WorkflowControl } from './workflows/WorkflowControl'
 const workflowCatalog = (() => {
   try {
     return {
-      workflow: parseWorkflow(uploadImage, architecture),
+      workflows: createWorkflowCatalog(architecture),
       error: undefined,
     }
   } catch (error) {
     return {
-      workflow: undefined,
+      workflows: [],
       error: `Workflow unavailable for this architecture. ${error instanceof Error ? error.message : String(error)}`,
     }
   }
@@ -59,30 +58,26 @@ function Map({
   }, [])
   const manualLocked = useRef(false)
   const nav = useSemanticZoom(world, size, reduced, canvas, manualLocked)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [workflowId, setWorkflowId] = useState<string>()
+  const workflow = workflowCatalog.workflows.find(
+    (item) => item.id === workflowId,
+  )
   const projections = useMemo(
     () =>
-      workflowCatalog.workflow?.steps.map((step) =>
+      workflow?.steps.map((step) =>
         projectStep(step, architecture, nav.parent),
       ) ?? [],
-    [nav.parent],
+    [workflow, nav.parent],
   )
-  const playback = useWorkflow(
-    workflowCatalog.workflow,
-    architecture,
-    nav,
-    reduced,
-  )
+  const playback = useWorkflow(workflow, architecture, nav, reduced)
   manualLocked.current = playback.busy
   const participation = useMemo(
     () =>
-      workflowCatalog.workflow
-        ? projectParticipation(
-            workflowCatalog.workflow,
-            architecture,
-            nav.parent,
-          )
+      workflow
+        ? projectParticipation(workflow, architecture, nav.parent)
         : undefined,
-    [nav.parent],
+    [workflow, nav.parent],
   )
   const baseGraph = useMemo(
     () =>
@@ -117,7 +112,7 @@ function Map({
   const path = ancestry(nav.parent)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || playback.busy) return
+      if (e.key !== 'Escape' || e.defaultPrevented || playback.busy) return
       if (nav.selected && nav.selected !== nav.parent) nav.select()
       else if (nav.parent) nav.back(components.get(nav.parent)?.parent)
     }
@@ -176,6 +171,21 @@ function Map({
       </nav>
       <WorkflowControl
         {...workflowCatalog}
+        workflow={workflow}
+        open={pickerOpen}
+        onOpen={() => setPickerOpen(true)}
+        onChoose={(id) => {
+          if (
+            workflowCatalog.workflows.some((item) => item.id === id) &&
+            playback.preview()
+          )
+            setWorkflowId(id)
+        }}
+        onClose={() => {
+          playback.close()
+          setPickerOpen(false)
+          setWorkflowId(undefined)
+        }}
         playback={playback}
         navigating={nav.navigating}
       />
