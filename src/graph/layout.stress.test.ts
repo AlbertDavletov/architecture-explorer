@@ -7,7 +7,17 @@ vi.mock('../model/architecture', () => ({
 }))
 import { buildWorld, framing } from './layout'
 
-it.each([0, 1, 2, 3, 5, 8])(
+it('balances four desktop siblings in two aligned rows and columns', () => {
+  model.items = Array.from({ length: 4 }, (_, i) => ({ id: String(i) }))
+  const boxes = [...buildWorld(false).places.values()].map((p) => p.box)
+  expect(boxes[0].y).toBe(boxes[1].y)
+  expect(boxes[2].y).toBe(boxes[3].y)
+  expect(boxes[0].x).toBe(boxes[2].x)
+  expect(boxes[1].x).toBe(boxes[3].x)
+  expect(boxes[0].y).toBeLessThan(boxes[2].y)
+})
+
+it.each([0, 1, 2, 3, 4, 5, 8])(
   'handles %i siblings without invalid bounds or overlap',
   (count) => {
     model.items = Array.from({ length: count }, (_, i) => ({ id: String(i) }))

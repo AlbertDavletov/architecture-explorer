@@ -7,7 +7,7 @@
     {
       "id": "request",
       "name": "Request upload",
-      "from": "pages",
+      "from": "shell",
       "to": "gateway",
       "kind": "request",
       "description": "You choose an image. The web app requests an upload."
@@ -40,7 +40,7 @@
       "id": "available",
       "name": "Show image",
       "from": "catalog",
-      "to": "pages",
+      "to": "shell",
       "kind": "data",
       "description": "The catalog returns the ready image to the web app."
     }

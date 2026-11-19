@@ -40,9 +40,9 @@
       ]
     },
     "records": {
-      "summary": "Keeps the saved document model in the fictional Loom system.",
+      "summary": "Stores versioned document models for the fictional Loom Document service.",
       "owner": "Loom Documents Team (fictional)",
-      "usedBy": ["gateway"]
+      "usedBy": ["document-service"]
     },
     "compositor": {
       "summary": "Combines rendered layers into a document preview in this fictional editor."

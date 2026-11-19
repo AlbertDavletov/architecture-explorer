@@ -1,15 +1,90 @@
 import { describe, expect, it } from 'vitest'
-import { ancestry, children, components, project } from './architecture'
+import {
+  ancestry,
+  children,
+  components,
+  project,
+  createArchitecture,
+  type Architecture,
+} from './architecture'
+import fixture from './architecture.json'
+
+const valid = fixture as Architecture
+
+it.each([
+  [
+    'duplicate IDs',
+    { ...valid, components: [...valid.components, valid.components[0]] },
+    /unique/,
+  ],
+  [
+    'missing parent',
+    { ...valid, components: [{ ...valid.components[0], parent: 'missing' }] },
+    /Unknown parent/,
+  ],
+  [
+    'blank name',
+    { ...valid, components: [{ ...valid.components[0], name: ' ' }] },
+    /nonempty/,
+  ],
+  [
+    'parent cycle',
+    {
+      ...valid,
+      components: [{ ...valid.components[0], parent: 'clients' }],
+      relationships: [],
+    },
+    /Circular parent/,
+  ],
+  [
+    'missing endpoint',
+    {
+      ...valid,
+      relationships: [{ from: 'clients', to: 'missing', kind: 'data' }],
+    },
+    /Unknown relationship/,
+  ],
+  [
+    'self relationship',
+    {
+      ...valid,
+      relationships: [{ from: 'clients', to: 'clients', kind: 'data' }],
+    },
+    /Invalid relationship/,
+  ],
+  [
+    'unknown signal',
+    {
+      ...valid,
+      relationships: [{ from: 'clients', to: 'cloud', kind: 'other' }],
+    },
+    /Invalid relationship/,
+  ],
+] as const)('rejects %s before rendering', (_name, value, message) => {
+  expect(() => createArchitecture(value as unknown as Architecture)).toThrow(
+    message,
+  )
+})
+
+it('keeps aggregation stable with repeated relationships and reordered components', () => {
+  const model = createArchitecture({
+    components: [...valid.components].reverse(),
+    relationships: [...valid.relationships, ...valid.relationships],
+  })
+  for (const parent of [undefined, ...components.keys()]) {
+    expect(model.project(parent).edges).toEqual(project(parent).edges)
+  }
+  expect(model.depth).toBe(5)
+})
 
 describe('architecture projection', () => {
   it('preserves hierarchy and ancestor order', () => {
     expect(children().map((c) => c.id)).toEqual(['clients', 'cloud'])
     expect(children('cloud').map((c) => c.id)).toEqual([
       'services',
-      'storage',
       'assets',
-      'notifications',
-      'sharing',
+      'storage',
+      'collaboration',
     ])
     expect(ancestry('files').map((c) => c.id)).toEqual([
       'cloud',
@@ -30,9 +105,7 @@ describe('architecture projection', () => {
         { from: 'storage', to: 'services', kind: 'data' },
       ]),
     )
-    expect(project('storage').edges).toEqual([
-      { from: 'records', to: 'files', kind: 'data' },
-    ])
+    expect(project('storage').edges).toEqual([])
   })
   it('only connects distinct visible siblings in every area', () => {
     for (const parent of [undefined, ...components.keys()]) {

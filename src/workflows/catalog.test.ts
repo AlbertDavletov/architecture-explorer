@@ -12,7 +12,7 @@ it('loads three uniquely identified workflows in authored order, with valid name
     'open-document',
     'save-changes',
   ])
-  expect(catalog.map((workflow) => workflow.steps.length)).toEqual([5, 5, 6])
+  expect(catalog.map((workflow) => workflow.steps.length)).toEqual([5, 6, 6])
   expect(new Set(catalog.map((workflow) => workflow.id)).size).toBe(3)
   for (const workflow of catalog) {
     expect(new Set(workflow.steps.map((step) => step.id)).size).toBe(
@@ -39,7 +39,7 @@ it.each([
   { name: ' ' },
   { name: 'x'.repeat(41) },
   { from: 'missing' },
-  { from: 'gateway', to: 'pages' },
+  { from: 'gateway', to: 'shell' },
   { kind: 'event' },
 ])('rejects invalid catalog steps: %j', (change) => {
   const workflow = catalog[0]
@@ -105,8 +105,8 @@ it('exposes distinct routes and updates the lens, including discoverable ancesto
   )
   expect(contexts).toEqual([
     [undefined, 'cloud', 'assets', 'assets', undefined],
-    [undefined, 'cloud', 'cloud', undefined, 'editor'],
-    ['editor', 'editor', undefined, 'cloud', 'cloud', undefined],
+    [undefined, 'services', 'cloud', 'cloud', undefined, 'editor'],
+    ['editor', undefined, 'services', 'cloud', 'cloud', undefined],
   ])
   expect(
     catalog.map((workflow) =>
@@ -117,27 +117,24 @@ it('exposes distinct routes and updates the lens, including discoverable ancesto
       services: 'contains',
       storage: 'unrelated',
       assets: 'contains',
-      notifications: 'unrelated',
-      sharing: 'unrelated',
+      collaboration: 'unrelated',
     },
     {
       services: 'contains',
       storage: 'contains',
       assets: 'unrelated',
-      notifications: 'unrelated',
-      sharing: 'unrelated',
+      collaboration: 'unrelated',
     },
     {
       services: 'contains',
       storage: 'contains',
       assets: 'unrelated',
-      notifications: 'participating',
-      sharing: 'unrelated',
+      collaboration: 'contains',
     },
   ])
   expect([
     ...projectParticipation(catalog[1], architecture, 'assets').values(),
-  ]).toEqual(Array(4).fill('unrelated'))
+  ]).toEqual(Array(3).fill('unrelated'))
   expect(projectParticipation(catalog[1], architecture).get('clients')).toBe(
     'contains',
   )

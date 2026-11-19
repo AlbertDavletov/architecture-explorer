@@ -7,42 +7,50 @@
     {
       "id": "request",
       "name": "Open document",
-      "from": "pages",
+      "from": "shell",
       "to": "gateway",
       "kind": "request",
-      "description": "You choose a document. Pages requests its saved content."
+      "description": "You choose a document in the application shell."
+    },
+    {
+      "id": "route",
+      "name": "Route the request",
+      "from": "gateway",
+      "to": "document-service",
+      "kind": "request",
+      "description": "The gateway asks the Document service to load the document."
     },
     {
       "id": "retrieve",
       "name": "Find saved content",
-      "from": "gateway",
+      "from": "document-service",
       "to": "records",
       "kind": "request",
-      "description": "The gateway asks Records for the document model."
+      "description": "The Document service reads the saved document model."
     },
     {
       "id": "read",
       "name": "Read document",
       "from": "records",
-      "to": "gateway",
+      "to": "document-service",
       "kind": "data",
-      "description": "Records returns the saved document model to the gateway."
+      "description": "Documents returns the saved model to the service."
     },
     {
       "id": "deliver",
       "name": "Load into editor",
-      "from": "gateway",
-      "to": "authoring",
+      "from": "document-service",
+      "to": "document-state",
       "kind": "data",
-      "description": "The gateway delivers the document model to Authoring in the web editor."
+      "description": "The service response loads the editor document state."
     },
     {
       "id": "display",
       "name": "Show document",
-      "from": "authoring",
+      "from": "document-state",
       "to": "rendering",
       "kind": "data",
-      "description": "Authoring passes the loaded model to Rendering for display."
+      "description": "The editor sends the loaded state to Rendering."
     }
   ]
 }

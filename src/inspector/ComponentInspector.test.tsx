@@ -159,7 +159,7 @@ it('preserves real guided workflow state and makes no navigation call when opene
     const [trigger, setTrigger] = useState<HTMLButtonElement>()
     return (
       <>
-        <button onClick={p.open}>Preview</button>
+        <button onClick={p.preview}>Preview</button>
         <button onClick={p.start}>Start</button>
         <button onClick={p.next}>Next</button>
         <button onClick={(event) => setTrigger(event.currentTarget)}>

@@ -230,9 +230,6 @@ export function useWorkflow(
     })
     return true
   }
-  const open = () => {
-    if (live.current.status === 'closed') preview()
-  }
   const start = () => {
     if (
       live.current.status === 'preview' ||
@@ -262,7 +259,6 @@ export function useWorkflow(
     measure,
     finish,
     preview,
-    open,
     start,
     next,
     close,

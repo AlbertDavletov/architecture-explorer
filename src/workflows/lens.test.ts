@@ -17,8 +17,7 @@ it('projects only participating endpoints and their containing ancestors', () =>
     services: 'contains',
     storage: 'unrelated',
     assets: 'contains',
-    notifications: 'unrelated',
-    sharing: 'unrelated',
+    collaboration: 'unrelated',
   })
   expect(
     Object.fromEntries(projectParticipation(workflow, architecture, 'assets')),
@@ -26,13 +25,11 @@ it('projects only participating endpoints and their containing ancestors', () =>
     uploads: 'participating',
     catalog: 'participating',
     processing: 'participating',
-    search: 'unrelated',
   })
   expect(
     Object.fromEntries(projectParticipation(workflow, architecture, 'web')),
   ).toEqual({
-    pages: 'participating',
-    'web-cache': 'unrelated',
+    shell: 'participating',
     editor: 'unrelated',
   })
 })
