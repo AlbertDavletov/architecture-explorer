@@ -8,15 +8,11 @@ export function WorkflowControl({
   error,
   playback: p,
   navigating,
-  follow,
-  location: context,
 }: {
   workflow?: Workflow
   error?: string
   playback: WorkflowPlayback
   navigating: boolean
-  follow?: () => void
-  location?: string
 }) {
   const trigger = useRef<HTMLButtonElement>(null)
   if (p.status === 'closed')
@@ -25,30 +21,32 @@ export function WorkflowControl({
         Workflows
       </button>
     )
-  const projection = p.current
-  const location =
-    projection?.status === 'internal'
-      ? `Inside ${components.get(projection.component)?.name}`
-      : projection?.status === 'outside'
-        ? `In ${context ?? 'another area'}`
-        : projection?.status === 'visible'
-          ? `${components.get(projection.from)?.name} → ${components.get(projection.to)?.name}`
-          : undefined
+  const problem = error ?? p.error
+  const step = workflow?.steps[p.index]
+  const label =
+    p.status === 'preview'
+      ? 'Start'
+      : p.status === 'completed'
+        ? 'Replay'
+        : 'Next'
   return (
-    <section className="workflow-control" aria-label="Guided workflow">
+    <section
+      className="workflow-control"
+      aria-label="Guided workflow"
+      data-phase={p.status}
+      aria-busy={p.busy}
+    >
       <div className="workflow-heading">
-        <strong>{workflow?.name ?? 'Workflows'}</strong>
-        {!error && p.status !== 'playing' && (
+        <strong title={workflow?.description}>
+          {workflow?.name ?? 'Workflows'}
+        </strong>
+        {!problem && (
           <button
             className="workflow-start"
-            disabled={navigating}
-            onClick={p.status === 'paused' ? p.resume : p.start}
+            disabled={p.busy || navigating}
+            onClick={p.status === 'waiting' ? p.next : p.start}
           >
-            {p.status === 'paused'
-              ? 'Continue'
-              : p.status === 'complete'
-                ? 'Replay'
-                : 'Start'}
+            {label}
           </button>
         )}
         <button
@@ -62,52 +60,30 @@ export function WorkflowControl({
           ×
         </button>
       </div>
-      <small>Illustrative scenario · Not live traffic</small>
-      {error ? (
-        <p role="alert">{error}</p>
+      {problem ? (
+        <p role="alert">{problem}</p>
       ) : (
-        <>
+        p.status !== 'preview' && (
           <div
             className="workflow-status"
             role="status"
             aria-live="polite"
             aria-atomic="true"
           >
-            {p.status === 'preview' ? (
-              <p>
-                Preview · Highlighted areas take part. Nested marks show
-                activity inside.
-              </p>
-            ) : p.status === 'complete' ? (
-              <p>Complete · Your image is ready.</p>
+            {p.status === 'completed' ? (
+              <p>Completed</p>
             ) : (
-              <>
-                <p>
-                  <span className="step-count">
-                    {p.index + 1} / {workflow?.steps.length}
-                  </span>{' '}
-                  {workflow?.steps[p.index].description ?? location}
-                </p>
-                <div className="workflow-location">
-                  <small>
-                    {p.status === 'paused' ? 'Paused · ' : ''}
-                    {location}
-                  </small>
-                  {follow && (
-                    <button
-                      className="workflow-follow"
-                      onClick={follow}
-                      disabled={navigating}
-                      title={`Follow to ${context}`}
-                    >
-                      Follow
-                    </button>
-                  )}
-                </div>
-              </>
+              <p title={step?.description}>
+                <span className="step-count">
+                  {p.index + 1}/{workflow?.steps.length}
+                </span>{' '}
+                ·{' '}
+                {step?.name ??
+                  `${components.get(step?.from ?? '')?.name} → ${components.get(step?.to ?? '')?.name}`}
+              </p>
             )}
           </div>
-        </>
+        )
       )}
     </section>
   )

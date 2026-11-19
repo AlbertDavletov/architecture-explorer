@@ -42,8 +42,10 @@ function setup(reduced = false) {
   element.append(pane)
   document.body.append(element)
   const canvas = { current: element }
+  const manualLocked = { current: false }
   const hook = renderHook(
-    ({ size, reduced }) => useSemanticZoom(world, size, reduced, canvas),
+    ({ size, reduced }) =>
+      useSemanticZoom(world, size, reduced, canvas, manualLocked),
     { initialProps: { size, reduced } },
   )
   const finish = () => act(() => vi.advanceTimersByTime(1100))
@@ -59,7 +61,7 @@ function setup(reduced = false) {
         new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true }),
       )
     })
-  return { ...hook, finish, select, enter, wheel }
+  return { ...hook, finish, select, enter, wheel, manualLocked }
 }
 
 describe('semantic navigation lifecycle', () => {
@@ -203,7 +205,7 @@ describe('semantic navigation lifecycle', () => {
     h.enter('clients')
     h.enter('web')
     camera.setViewport.mockClear()
-    act(() => h.result.current.goTo('assets'))
+    act(() => void h.result.current.goTo('assets'))
     expect(h.result.current.navigating).toBe(true)
     // Duplicate follow/back requests cannot create competing trips.
     act(() => {
@@ -228,16 +230,16 @@ describe('semantic navigation lifecycle', () => {
 
   it('follows down multiple levels, does nothing at the destination and rejects leaf targets', () => {
     const h = setup()
-    act(() => h.result.current.goTo('assets'))
+    act(() => void h.result.current.goTo('assets'))
     act(() => vi.advanceTimersByTime(3000))
     expect(h.result.current.parent).toBe('assets')
     const view = { ...camera.view }
-    act(() => h.result.current.goTo('assets'))
+    act(() => void h.result.current.goTo('assets'))
     expect(h.result.current.navigating).toBe(false)
-    act(() => h.result.current.goTo('processing'))
+    act(() => void h.result.current.goTo('processing'))
     expect(h.result.current.navigating).toBe(false)
     expect(camera.view).toEqual(view)
-    act(() => h.result.current.goTo())
+    act(() => void h.result.current.goTo())
     act(() => vi.advanceTimersByTime(3000))
     expect(h.result.current.parent).toBeUndefined()
   })
@@ -246,7 +248,7 @@ describe('semantic navigation lifecycle', () => {
     const h = setup()
     h.enter('clients')
     h.enter('web')
-    act(() => h.result.current.goTo('assets'))
+    act(() => void h.result.current.goTo('assets'))
     act(() => vi.advanceTimersByTime(250))
     const narrow = { width: 390, height: 844 }
     h.rerender({ size: narrow, reduced: false })
@@ -254,8 +256,107 @@ describe('semantic navigation lifecycle', () => {
     expect(h.result.current.parent).toBe('assets')
     expect(Object.values(camera.view).every(Number.isFinite)).toBe(true)
     h.rerender({ size: narrow, reduced: true })
-    act(() => h.result.current.goTo('web'))
+    act(() => void h.result.current.goTo('web'))
     expect(h.result.current.parent).toBe('web')
     expect(h.result.current.navigating).toBe(false)
+  })
+
+  it('resolves guided arrival only after the camera and graph reach their destination', async () => {
+    const h = setup()
+    let arrived!: Promise<boolean>
+    act(() => {
+      arrived = h.result.current.goTo('assets')
+    })
+    const finish = vi.fn()
+    void arrived.then(finish)
+    act(() => vi.advanceTimersByTime(200))
+    expect(finish).not.toHaveBeenCalled()
+    expect(h.result.current.navigating).toBe(true)
+    act(() => vi.advanceTimersByTime(3000))
+    expect(await arrived).toBe(true)
+    expect(h.result.current.parent).toBe('assets')
+    expect(camera.view).toEqual(framing(world, size, 'assets').home)
+  })
+
+  it('keeps an in-frame interaction still and gently reframes one panned off-screen', async () => {
+    const h = setup()
+    camera.setViewport.mockClear()
+    expect(
+      await h.result.current.goTo(undefined, undefined, ['clients', 'cloud']),
+    ).toBe(true)
+    expect(camera.setViewport).not.toHaveBeenCalled()
+    camera.view = { ...camera.view, x: camera.view.x + 1600 }
+    let arrived!: Promise<boolean>
+    act(() => {
+      arrived = h.result.current.goTo(undefined, undefined, [
+        'clients',
+        'cloud',
+      ])
+    })
+    expect(h.result.current.navigating).toBe(true)
+    act(() => vi.advanceTimersByTime(500))
+    expect(await arrived).toBe(true)
+    expect(camera.view).toEqual(framing(world, size).home)
+    expect(h.result.current.parent).toBeUndefined()
+  })
+
+  it('blocks manual camera gestures only during a guided action and restores them afterward', () => {
+    const h = setup()
+    h.select('clients')
+    h.manualLocked.current = true
+    act(() => h.result.current.enter('clients'))
+    h.wheel(-900)
+    act(() => h.result.current.back())
+    expect(h.result.current.navigating).toBe(false)
+    act(() => void h.result.current.goTo('assets'))
+    act(() => vi.advanceTimersByTime(3000))
+    expect(h.result.current.parent).toBe('assets')
+    h.manualLocked.current = false
+    act(() => h.result.current.back('cloud'))
+    h.finish()
+    expect(h.result.current.parent).toBe('cloud')
+  })
+
+  it('cancels a guided trip and restores departure context, camera and breadcrumb history', async () => {
+    const h = setup()
+    h.enter('clients')
+    h.enter('web')
+    const departure = { ...camera.view }
+    const abort = new AbortController()
+    let arrived!: Promise<boolean>
+    act(() => {
+      arrived = h.result.current.goTo('assets', abort.signal)
+    })
+    act(() => vi.advanceTimersByTime(650))
+    act(() => abort.abort())
+    expect(await arrived).toBe(false)
+    expect(h.result.current.parent).toBe('web')
+    expect(h.result.current.navigating).toBe(false)
+    expect(camera.view).toEqual(departure)
+    act(() => vi.advanceTimersByTime(4000))
+    expect(camera.view).toEqual(departure)
+    act(() => h.result.current.back('clients'))
+    h.finish()
+    expect(h.result.current.parent).toBe('clients')
+  })
+
+  it('cancellation after resize uses reframed departure and unmount settles pending arrival', async () => {
+    const h = setup()
+    h.enter('clients')
+    const abort = new AbortController()
+    let arrived!: Promise<boolean>
+    act(() => {
+      arrived = h.result.current.goTo('assets', abort.signal)
+    })
+    h.rerender({ size: { width: 390, height: 844 }, reduced: false })
+    act(() => abort.abort())
+    expect(await arrived).toBe(false)
+    expect(h.result.current.parent).toBe('clients')
+    expect(Object.values(camera.view).every(Number.isFinite)).toBe(true)
+    act(() => {
+      arrived = h.result.current.goTo('assets')
+    })
+    h.unmount()
+    expect(await arrived).toBe(false)
   })
 })

@@ -22,6 +22,7 @@ export interface Journey {
   entering: boolean
 }
 interface Trip {
+  version: number
   from: Frame
   to: Frame
   steps: Journey[]
@@ -39,6 +40,7 @@ export function useSemanticZoom(
   size: Size,
   reduced: boolean,
   canvas: RefObject<HTMLDivElement | null>,
+  manualLocked?: RefObject<boolean>,
 ) {
   const flow = useReactFlow()
   const [parent, setParent] = useState<string>()
@@ -54,6 +56,14 @@ export function useSemanticZoom(
   })
   const history = useRef<Frame[]>([])
   const locked = useRef(false)
+  const tripVersion = useRef(0)
+  const completion = useRef<
+    | {
+        finish: (arrived: boolean) => void
+        reframe: (convert: (f: Frame) => Frame) => void
+      }
+    | undefined
+  >(undefined)
   const restoreFocus = useRef(false)
   const quietUntil = useRef(0)
   const previous = useRef({ world, size })
@@ -63,12 +73,12 @@ export function useSemanticZoom(
 
   const select = useCallback(
     (id?: string) => {
-      if (locked.current) return
+      if (locked.current || manualLocked?.current) return
       setSelected(id)
       selectionZoom.current = flow.getZoom()
       intent.current = 1
     },
-    [flow],
+    [flow, manualLocked],
   )
 
   const travel = useCallback(
@@ -77,6 +87,7 @@ export function useSemanticZoom(
       restoreFocus.current = !!canvas.current?.querySelector(':focus-visible')
       setStepIndex(0)
       setTrip({
+        version: ++tripVersion.current,
         steps,
         from: { parent, view: flow.getViewport() },
         to,
@@ -98,6 +109,7 @@ export function useSemanticZoom(
     (id: string, restore?: Viewport) => {
       if (
         locked.current ||
+        manualLocked?.current ||
         id !== selected ||
         components.get(id)?.parent !== parent ||
         !children(id).length
@@ -109,12 +121,12 @@ export function useSemanticZoom(
         view: framing(world, size, id).home,
       })
     },
-    [selected, parent, flow, world, size, travel],
+    [selected, parent, flow, world, size, travel, manualLocked],
   )
 
   const back = useCallback(
     (target?: string) => {
-      if (locked.current) return
+      if (locked.current || manualLocked?.current) return
       if (!parent && !target) {
         travel([], { view: framing(world, size).home })
         return
@@ -131,19 +143,44 @@ export function useSemanticZoom(
       }))
       travel(steps, frames[frames.length - 1])
     },
-    [parent, travel, world, size],
+    [parent, travel, world, size, manualLocked],
   )
 
   // A single coordinated route for user-requested navigation to any container.
   // Normal entry/back keep their existing camera behavior and saved viewports.
   const goTo = useCallback(
-    (target?: string) => {
+    (
+      target?: string,
+      signal?: AbortSignal,
+      focusIds: string[] = [],
+    ): Promise<boolean> => {
       if (
+        signal?.aborted ||
         locked.current ||
-        target === parent ||
         (target && !children(target).length)
       )
-        return
+        return Promise.resolve(false)
+      const sameContext = target === parent
+      const viewport = flow.getViewport()
+      const inFrame = focusIds.every((id) => {
+        const box = world.places.get(id)?.box
+        if (!box) return true
+        const x = box.x * viewport.zoom + viewport.x,
+          y = box.y * viewport.zoom + viewport.y
+        return (
+          x >= 12 &&
+          y >= 70 &&
+          x + box.width * viewport.zoom <= size.width - 12 &&
+          y + box.height * viewport.zoom <= size.height - 90
+        )
+      })
+      if (sameContext && inFrame) return Promise.resolve(true)
+      let departure = {
+        parent,
+        view: flow.getViewport(),
+        selected,
+        history: [...history.current],
+      }
       const { contexts } = contextRoute(parent, target)
       const saved = new Map(
         history.current.map((frame) => [frame.parent, frame]),
@@ -160,6 +197,8 @@ export function useSemanticZoom(
                   : (saved.get(id)?.view ?? framing(world, size, id).home),
             },
       )
+      if (sameContext)
+        waypoints[0] = { parent, view: framing(world, size, parent).home }
       const steps = contexts.slice(1).map((id, i): Journey => {
         const entering =
           id !== undefined && components.get(id)?.parent === contexts[i]
@@ -173,20 +212,58 @@ export function useSemanticZoom(
           .slice(0, -1)
           .map((c) => c.id),
       ]
-      history.current = target
-        ? ancestors.map(
-            (id) =>
-              saved.get(id) ??
-              waypoints.find((f) => f.parent === id) ?? {
-                parent: id,
-                view: framing(world, size, id).home,
-              },
-          )
-        : []
-      travel(steps, waypoints.at(-1)!, waypoints)
+      history.current = sameContext
+        ? departure.history
+        : target
+          ? ancestors.map(
+              (id) =>
+                saved.get(id) ??
+                waypoints.find((f) => f.parent === id) ?? {
+                  parent: id,
+                  view: framing(world, size, id).home,
+                },
+            )
+          : []
+      return new Promise<boolean>((resolve) => {
+        const pending = {
+          reframe: (convert: (f: Frame) => Frame) => {
+            departure = {
+              ...departure,
+              ...convert(departure),
+              history: departure.history.map(convert),
+            }
+          },
+          finish: (arrived: boolean) => {
+            signal?.removeEventListener('abort', cancel)
+            if (completion.current === pending) completion.current = undefined
+            resolve(arrived)
+          },
+        }
+        const cancel = () => {
+          if (completion.current !== pending) return
+          // Roll back an interrupted guided trip to its coherent departure
+          // view/history rather than leaving half-open semantic shells.
+          tripVersion.current++
+          locked.current = false
+          restoreFocus.current = false
+          history.current = departure.history
+          setParent(departure.parent)
+          setSelected(departure.selected)
+          void flow.setViewport(departure.view)
+          selectionZoom.current = departure.view.zoom
+          intent.current = 1
+          setTrip(undefined)
+          pending.finish(false)
+        }
+        completion.current = pending
+        signal?.addEventListener('abort', cancel, { once: true })
+        travel(steps, waypoints.at(-1)!, sameContext ? undefined : waypoints)
+      })
     },
-    [parent, flow, world, size, travel],
+    [parent, selected, flow, world, size, travel],
   )
+
+  useEffect(() => () => completion.current?.finish(false), [])
 
   useLayoutEffect(() => {
     if (trip || !restoreFocus.current) return
@@ -212,6 +289,7 @@ export function useSemanticZoom(
     let location = from.parent
     let raf = 0
     function tick(now: number, beforePaint = false) {
+      if (trip!.version !== tripVersion.current) return
       const t = reduced ? 1 : Math.min(1, Math.max(0, (now - start) / duration))
       const eased = t * t * (3 - 2 * t)
       const routePosition = t * steps.length
@@ -274,6 +352,7 @@ export function useSemanticZoom(
       locked.current = false
       quietUntil.current = performance.now() + GESTURE_GAP
       setTrip(undefined)
+      completion.current?.finish(true)
     }
     tick(performance.now(), true)
     return () => cancelAnimationFrame(raf)
@@ -295,6 +374,7 @@ export function useSemanticZoom(
       ),
     })
     history.current = history.current.map(convert)
+    completion.current?.reframe(convert)
     if (trip)
       setTrip({
         ...trip,
@@ -321,6 +401,7 @@ export function useSemanticZoom(
       event.stopPropagation()
     }
     const blocked = () => {
+      if (manualLocked?.current) return true
       if (!locked.current && performance.now() >= quietUntil.current)
         return false
       quietUntil.current = performance.now() + GESTURE_GAP
@@ -400,6 +481,7 @@ export function useSemanticZoom(
     back,
     canvas,
     flow,
+    manualLocked,
   ])
 
   return {

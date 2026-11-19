@@ -3,11 +3,12 @@ import type { MapEdge } from '../graph/SignalEdge'
 import type { ProjectedStep, Participation } from './projection'
 import type { WorkflowPlayback } from './useWorkflow'
 
-export type Emphasis = 'related' | 'current' | 'dimmed'
+export type Emphasis = 'related' | 'current' | 'done' | 'dimmed'
 export interface WorkflowSignal {
   token: string
   reduced: boolean
   measure: (duration: number) => void
+  finish: () => void
 }
 
 export function workflowOverlay(
@@ -23,20 +24,30 @@ export function workflowOverlay(
     projections.flatMap((p) => (p.status === 'visible' ? [p.edgeId] : [])),
   )
   const active =
-    playback.status === 'playing' || playback.status === 'paused'
+    playback.status === 'focusing' || playback.status === 'animating'
       ? playback.current
       : undefined
+  const completed = projections.slice(0, playback.completedCount)
+  const doneNodes = new Set(completed.flatMap((p) => p.nodes))
+  const doneEdges = new Set(
+    completed.flatMap((p) => (p.status === 'visible' ? [p.edgeId] : [])),
+  )
   return {
     nodes: graph.nodes.map((n) => ({
       ...n,
       data: {
         ...n.data,
         participation: participation?.get(n.id),
+        arriving:
+          (playback.status === 'waiting' || playback.status === 'completed') &&
+          playback.arrival?.component === n.id,
         emphasis: (active?.nodes.includes(n.id)
           ? 'current'
-          : nodes.has(n.id) || n.data.shell === 'boundary'
-            ? 'related'
-            : 'dimmed') as Emphasis,
+          : doneNodes.has(n.id)
+            ? 'done'
+            : nodes.has(n.id) || n.data.shell === 'boundary'
+              ? 'related'
+              : 'dimmed') as Emphasis,
       },
     })),
     edges: graph.edges.map((e) => {
@@ -47,15 +58,18 @@ export function workflowOverlay(
           ...e.data!,
           emphasis: (current
             ? 'current'
-            : edges.has(e.id)
-              ? 'related'
-              : 'dimmed') as Emphasis,
+            : doneEdges.has(e.id)
+              ? 'done'
+              : edges.has(e.id)
+                ? 'related'
+                : 'dimmed') as Emphasis,
           signal:
-            current && playback.status === 'playing'
+            current && playback.status === 'animating'
               ? {
                   token: playback.token,
                   reduced: playback.reduced,
                   measure: playback.measure,
+                  finish: playback.finish,
                 }
               : undefined,
         },

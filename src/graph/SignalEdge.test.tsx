@@ -1,7 +1,8 @@
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { EdgeProps } from '@xyflow/react'
 import { SignalEdge, type MapEdge } from './SignalEdge'
+import { workflowSignalDuration } from '../workflows/signalDuration'
 
 afterEach(cleanup)
 const props = {
@@ -31,25 +32,33 @@ it('renders static architecture with a directional arrow and no signal dot', () 
     h.container.querySelector('.signal-direction')?.getAttribute('d'),
   ).toBe('M 3 -3 L -2 0 L 3 3')
 })
-it('measures a single workflow signal at fixed speed and preserves direction', () => {
+it('uses the same adaptive duration for CSS and fallback and preserves direction', () => {
   Object.defineProperty(SVGElement.prototype, 'getTotalLength', {
     configurable: true,
     value: () => 84,
   })
   const measure = vi.fn()
+  const finish = vi.fn()
   const h = render(
     <svg>
       <SignalEdge
         {...props}
         data={{
           ...props.data!,
-          signal: { token: '1/0', reduced: false, measure },
+          signal: { token: '1/0', reduced: false, measure, finish },
         }}
       />
     </svg>,
   )
-  expect(measure).toHaveBeenCalledWith(2000)
+  const duration = workflowSignalDuration(84)
+  expect(measure).toHaveBeenCalledWith(duration)
+  expect(
+    (h.container.querySelector('.traveler') as SVGElement).style
+      .animationDuration,
+  ).toBe(`${duration}ms`)
   expect(h.container.querySelectorAll('.traveler')).toHaveLength(1)
+  fireEvent.animationEnd(h.container.querySelector('.traveler')!)
+  expect(finish).toHaveBeenCalledTimes(1)
   expect(
     (h.container.querySelector('.traveler') as SVGElement).style
       .animationDirection,
@@ -60,7 +69,7 @@ it('measures a single workflow signal at fixed speed and preserves direction', (
         {...props}
         data={{
           ...props.data!,
-          signal: { token: '1/0', reduced: true, measure },
+          signal: { token: '1/0', reduced: true, measure, finish },
         }}
       />
     </svg>,

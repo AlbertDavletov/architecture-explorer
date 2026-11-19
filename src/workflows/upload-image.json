@@ -6,6 +6,7 @@
   "steps": [
     {
       "id": "request",
+      "name": "Request upload",
       "from": "pages",
       "to": "gateway",
       "kind": "request",
@@ -13,6 +14,7 @@
     },
     {
       "id": "transfer",
+      "name": "Store image",
       "from": "gateway",
       "to": "uploads",
       "kind": "data",
@@ -20,6 +22,7 @@
     },
     {
       "id": "process",
+      "name": "Prepare preview",
       "from": "uploads",
       "to": "processing",
       "kind": "event",
@@ -27,6 +30,7 @@
     },
     {
       "id": "catalog",
+      "name": "Add to library",
       "from": "processing",
       "to": "catalog",
       "kind": "data",
@@ -34,6 +38,7 @@
     },
     {
       "id": "available",
+      "name": "Show image",
       "from": "catalog",
       "to": "pages",
       "kind": "data",

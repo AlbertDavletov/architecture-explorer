@@ -17,11 +17,7 @@ import { useSemanticZoom } from './graph/useSemanticZoom'
 import { Icon } from './ui/Icon'
 import uploadImage from './workflows/upload-image.json'
 import { parseWorkflow } from './workflows/model'
-import {
-  projectStep,
-  projectParticipation,
-  stepContext,
-} from './workflows/projection'
+import { projectStep, projectParticipation } from './workflows/projection'
 import { useWorkflow } from './workflows/useWorkflow'
 import { workflowOverlay } from './workflows/overlay'
 import { WorkflowControl } from './workflows/WorkflowControl'
@@ -61,7 +57,8 @@ function Map({
     media.addEventListener('change', change)
     return () => media.removeEventListener('change', change)
   }, [])
-  const nav = useSemanticZoom(world, size, reduced, canvas)
+  const manualLocked = useRef(false)
+  const nav = useSemanticZoom(world, size, reduced, canvas, manualLocked)
   const projections = useMemo(
     () =>
       workflowCatalog.workflow?.steps.map((step) =>
@@ -71,11 +68,11 @@ function Map({
   )
   const playback = useWorkflow(
     workflowCatalog.workflow,
-    projections,
-    `${nav.parent ?? 'root'}/${vertical}`,
-    nav.navigating,
+    architecture,
+    nav,
     reduced,
   )
+  manualLocked.current = playback.busy
   const participation = useMemo(
     () =>
       workflowCatalog.workflow
@@ -87,28 +84,6 @@ function Map({
         : undefined,
     [nav.parent],
   )
-  const currentStep = workflowCatalog.workflow?.steps[playback.index]
-  const destination = currentStep
-    ? stepContext(currentStep, architecture)
-    : undefined
-  const canFollow =
-    (playback.status === 'playing' || playback.status === 'paused') &&
-    destination?.status === 'available' &&
-    destination.parent !== nav.parent &&
-    playback.current?.status !== 'visible'
-  const follow = canFollow
-    ? () => {
-        if (nav.navigating || destination?.status !== 'available') return
-        playback.pause()
-        nav.goTo(destination.parent)
-      }
-    : undefined
-  const stepLocation =
-    destination?.status === 'available'
-      ? ancestry(destination.parent)
-          .map((c) => c.name)
-          .join(' / ') || 'System overview'
-      : undefined
   const baseGraph = useMemo(
     () =>
       scene(
@@ -119,6 +94,7 @@ function Map({
         nav.explored,
         nav.select,
         nav.enter,
+        playback.busy,
       ),
     [
       world,
@@ -128,6 +104,7 @@ function Map({
       nav.explored,
       nav.select,
       nav.enter,
+      playback.busy,
     ],
   )
   const graph = workflowOverlay(
@@ -140,13 +117,13 @@ function Map({
   const path = ancestry(nav.parent)
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
+      if (e.key !== 'Escape' || playback.busy) return
       if (nav.selected && nav.selected !== nav.parent) nav.select()
       else if (nav.parent) nav.back(components.get(nav.parent)?.parent)
     }
     window.addEventListener('keydown', key)
     return () => window.removeEventListener('keydown', key)
-  }, [nav.selected, nav.parent, nav.back, nav.select])
+  }, [nav.selected, nav.parent, nav.back, nav.select, playback.busy])
   return (
     <>
       <ReactFlow<MapNode, MapEdge>
@@ -158,9 +135,9 @@ function Map({
         minZoom={nav.minZoom}
         maxZoom={nav.maxZoom}
         onPaneClick={() => nav.select()}
-        panOnDrag={!nav.navigating}
-        zoomOnPinch={!nav.navigating}
-        zoomOnScroll={!nav.navigating}
+        panOnDrag={!nav.navigating && !playback.busy}
+        zoomOnPinch={!nav.navigating && !playback.busy}
+        zoomOnScroll={!nav.navigating && !playback.busy}
         zoomOnDoubleClick={false}
         nodesDraggable={false}
         nodesConnectable={false}
@@ -175,7 +152,7 @@ function Map({
           <Icon name="brand" size={19} />
         </span>
         <button
-          disabled={nav.navigating}
+          disabled={nav.navigating || playback.busy}
           aria-current={!nav.parent ? 'location' : undefined}
           title={nav.parent ? 'Return to system overview' : 'Recenter overview'}
           onClick={() => nav.back()}
@@ -186,7 +163,9 @@ function Map({
           <Fragment key={item.id}>
             <Icon name="chevron" size={13} />
             <button
-              disabled={nav.navigating || i === path.length - 1}
+              disabled={
+                nav.navigating || playback.busy || i === path.length - 1
+              }
               aria-current={i === path.length - 1 ? 'location' : undefined}
               onClick={() => nav.back(item.id)}
             >
@@ -199,8 +178,6 @@ function Map({
         {...workflowCatalog}
         playback={playback}
         navigating={nav.navigating}
-        follow={follow}
-        location={stepLocation}
       />
       <div className="legend" aria-label="Illustrative signals">
         {[

@@ -21,7 +21,7 @@ Drag the background to pan. Click empty canvas to clear the selection and zoom w
 
 Use Tab to focus a card and Enter or Space to select it. Press Enter on a selected expandable card to explore it. Esc clears a selected card or returns one level when inside a component.
 
-The default Architecture view is static. Blue connections represent requests, green data transfers, and orange events; chevrons show direction. Open **Workflows → Start** to watch **Upload an image**. Only its current visible interaction gets a moving dot. Reduced-motion preferences make navigation immediate and replace the workflow moving dot with a stationary marker.
+The default Architecture view is static. Blue connections represent requests, green data transfers, and orange events; chevrons show direction. Open **Workflows → Start** to explore **Upload an image** one step at a time. Each **Next** action finds and explains one interaction, then waits. Only its current visible interaction gets a moving dot. Reduced-motion preferences make navigation immediate and replace the workflow moving dot with a stationary marker.
 
 ## Edit the fixture
 
@@ -55,17 +55,27 @@ The dense dependency experiment is documented below. Physical trackpad gestures 
 
 Run npm test for architecture projection, viewport calculations, navigation lifecycle, gesture blocking, resize, reduced motion, and component interaction tests. Tests use Vitest, React Testing Library, and jsdom.
 
-## Guided workflows (v0.6)
+## Guided step-by-step workflows (v0.6.2)
 
-Architecture shows structure; Workflows show behavior on the same canvas. Traffic Awareness remains a future optional Architecture capability. There is no telemetry or private infrastructure.
+Architecture shows structure; Workflows show behavior on the same canvas. Traffic Awareness remains a future optional Architecture capability. This is an illustrative Loom scenario, not telemetry or a production trace.
 
-Open **Workflows** to preview the participating areas, then **Start**. The five-step **Upload an image** scenario follows a request from Pages to Gateway, image data from Gateway to Uploads, an event from Uploads to Processing, prepared data from Processing to Catalog, and the ready image from Catalog to Pages. The first step includes the user's action of choosing an image. These are illustrative logical interactions, not a production trace. Three relationships were explicitly added to Loom in v0.6: `gateway → uploads / data`, `uploads → processing / event`, and `catalog → pages / data`. All previous components and relationships remain; the dense fixture is unchanged.
+Open **Workflows** to preview participants. Direct participants have a subtle solid outline; containers have a dashed outline and an emphasized nested mark. Other nodes remain visible and navigable. **Start** explains only the first step. **Next** explains exactly one subsequent step. Nothing advances while you read or explore.
 
-The overview shows the request and final response, with three intermediate steps indicated **Inside Cloud**. To see more detail, enter **Cloud → Assets**, then start or replay: the event into Processing and data returning to Catalog are visible there. Search stays visible but subdued. Navigation never happens automatically.
+The five steps are **Request upload → Store image → Prepare preview → Add to library → Show image**. They use the existing directed relationships from Pages to Gateway, Gateway to Uploads, Uploads to Processing, Processing to Catalog, and Catalog to Pages. Loom and the dense fixture are unchanged in this release.
+
+Each action follows **Navigate → Focus → Signal → Hold**. A clearly visible interaction stays in place; otherwise the existing projection finds the deepest valid context exposing distinct endpoints. For the normal overview journey, the contexts are System overview, Cloud, Assets, Assets, System overview. Cross-branch routes pass through the lowest common ancestor using the existing spatial coordinates and adjacent-level transitions.
+
+If manual panning moved an interaction off-screen at the correct level, the action gently reframes it before the signal. Already visible endpoints do not cause camera movement.
+
+After the camera arrives, a short 180 ms focus phase highlights the participants, then one signal traverses the real connection once in 650–1800 ms, using an adaptive duration based on SVG path length. Blue means request, green data, orange event. Its arrival completes the step and enables Next immediately. The destination receives one restrained border emphasis for 420 ms, then returns to the quieter completed outline. The feedback clears on Next, Replay, Close or semantic navigation and never blocks exploration. Reduced motion uses a brief static border with no transition. Completed connections remain subtly emphasized. After the last step, **Completed** and **Replay** remain until closed; there is no looping or automatic reset.
+
+Between steps you can pan, zoom, use breadcrumbs and explore unrelated components. This does not change workflow progress. Next finds the next interaction from your new location. During the requested navigation/focus/signal action, graph interactions and Next are temporarily disabled so the camera and signal cannot compete; Close stays available. There are no Follow, Continue, Pause, speed or timeline controls.
+
+**Close** removes the overlay and cancels outstanding work. Closing during a guided camera trip restores its departure context, camera and breadcrumb history, including after resize. This deliberate rollback avoids leaving partially expanded semantic shells; it can visibly snap back. Closing during a signal keeps the reached view and removes the signal. Reduced motion resolves navigation immediately and uses a stationary marker for 600 ms before waiting for Next. An internal action with no external edge uses the same finite static highlight instead of inventing a signal path.
 
 ### JSON and validation
 
-Edit [src/workflows/upload-image.json](src/workflows/upload-image.json). A minimal valid example is:
+Edit [src/workflows/upload-image.json](src/workflows/upload-image.json). For example:
 
 ```json
 {
@@ -75,6 +85,7 @@ Edit [src/workflows/upload-image.json](src/workflows/upload-image.json). A minim
   "steps": [
     {
       "id": "request",
+      "name": "Request upload",
       "from": "pages",
       "to": "gateway",
       "kind": "request",
@@ -84,39 +95,34 @@ Edit [src/workflows/upload-image.json](src/workflows/upload-image.json). A minim
 }
 ```
 
-Workflow and step descriptions are optional. Stable step IDs and an explicit execution mode leave a boundary for future branching/parallel definitions; only ordered sequences are accepted today. [Validation](src/workflows/model.ts) checks schema, unique step IDs, component references, and exact directed relationships including signal kind. Missing interactions are errors, never fabricated edges. The experimental dense fixture reports that this Loom workflow is unavailable.
+Step names and descriptions are optional. Without a short name, the control falls back to endpoint names. Descriptions remain available on hover. Stable step IDs and explicit sequence execution leave room for future branching definitions, but no parallel scheduler is implemented. Validation checks IDs, names, component references and the exact directed signal type. Missing interactions are surfaced as errors, never invented edges. The experimental dense fixture reports that this Loom workflow is unavailable.
 
-### Projection and playback
+### State, navigation and cancellation
 
-[Workflow projection](src/workflows/projection.ts) independently resolves endpoints through architecture ancestry into visible siblings and the same directed/type edge IDs used by the scene. It distinguishes a visible relationship, an internal step inside one aggregated component, an interaction partly/fully outside the focused area, and an invalid relationship. Internal steps highlight the component without drawing a self-edge. Outside steps highlight any visible endpoint and explain the limited view. The logical sequence is never filtered or reordered when the architectural level changes.
+[Workflow state](src/workflows/useWorkflow.ts) owns the logical index and explicit preview, navigating, focusing, animating, waiting and completed phases, plus closed/error states. A synchronous run token prevents repeated clicks and stale callbacks from completing or skipping steps. One effect orchestrates each requested action. Navigation completion is awaited before focus or signals; navigation alone cannot complete a logical step.
 
-[Playback](src/workflows/useWorkflow.ts) owns logical step, run ID, status, and finite timers independently of navigation and architecture. [The overlay](src/workflows/overlay.ts) adds emphasis and a signal descriptor to existing nodes/edges without changing positions, geometry, selection or navigation callbacks. The shared edge renderer measures its SVG path; a single dot travels once at 42 sibling-local units/second, followed by a 600 ms arrival dwell. Internal/outside steps and reduced-motion steps last 2.2 seconds. No animation events are required for completion. Reduced motion uses a static marker and the same logical order. Final path highlighting stays for 2.6 seconds, then the canvas becomes neutral; **Replay** remains available. **Close workflow** cancels playback immediately.
+[Semantic zoom](src/graph/useSemanticZoom.ts) exposes a cancellable arrival promise for guided routes while retaining ordinary entry/back behavior. Abort restores the saved departure and invalidates queued camera frames. Closing or unmounting aborts navigation and clears phase timers. The shared [edge renderer](src/graph/SignalEdge.tsx) reports CSS animation completion, with a measured-duration fallback if a browser event is missed. Reduced-motion/internal actions use deterministic static dwell timers. Neither path selects the next step: only a new user action can do that.
 
-Changing architectural level, recentering, or switching between row/column layouts pauses active playback and preserves its logical step. **Continue** restarts that interaction in the new view; fractional signal progress is not preserved. Pan and ordinary zoom continue without pausing. This projection boundary prepares cross-level exploration without introducing automatic camera choreography or a general execution engine.
+[Projection](src/workflows/projection.ts) stays independent of playback and resolves logical component IDs to visible ancestors, real directed relationships, internal actions or out-of-view interactions. [The lens](src/workflows/overlay.ts) adds participation/current/completed emphasis without changing coordinates or introducing another graph engine. The architecture data model has no camera or workflow state.
 
-### Limits and validation
+Known limits: one authored sequential scenario; no previous-step control, branching engine, real telemetry or cross-level signal travel. Workflow timing is explanatory, not real latency; long routes are capped at 1800 ms. Guided cancellation rolls back the camera rather than freezing between levels. Existing dense-routing crossings remain. Physical trackpad gestures and larger real architectures still need evaluation.
 
-Only one authored workflow is exposed; there is no editing UI, branching scheduler, traffic metric, live trace or cross-level signal travel. Hidden/internal steps are described and timed, not expanded automatically. Long visible routes take longer at the fixed speed. Existing dense-routing crossings remain.
+Validation: **90 tests passed** across 12 files, and `npm run build` passed. Chromium at 1440 × 900 and 390 × 844 completed all five user-paced steps, manual cross-branch exploration between steps, repeated Next clicks, replay, cancellation during camera/signal activity and reduced motion. Per-frame checks verified no signals during navigation/focus and no camera motion during a signal. Additional checks verified off-screen interactions reframe before animation. Existing deep-entry, breadcrumb, exact viewport restoration and wheel-navigation regressions passed at 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844. A local WebM recording captured the desktop journey.
 
-`npm test` includes workflow schema/projection, deterministic timer lifecycle, close/replay, navigation pause, reduced motion, static default edges and preservation of graph/navigation properties, alongside the existing hierarchy and navigation regressions. `npm run build` checks TypeScript and creates the production bundle.
+### Transition polish
 
-v0.6 verification: **60 tests passed** across 10 files; production build passed. Chromium checks at 1440 × 900 and 390 × 844 covered static defaults, nested Assets playback, actual dot movement, event/data ordering, dimming, finite completion, neutral reset, replay, navigation pause with the same logical step, close, and stationary reduced-motion playback. Additional mobile checks confirmed the compact panel does not obscure cards in Cloud or Assets. The dense development fixture remains static and reports an incompatible workflow instead of fabricating interactions. Existing navigation regressions passed at 1440 × 900, 1024 × 768, 768 × 1024, and 390 × 844, including deep entries, saved viewport restoration, wheel entry and deselected exit.
+The workflow-only [duration helper](src/workflows/signalDuration.ts) uses `round(clamp(450 + 450 × ln(1 + length / 80), 650, 1800))` in sibling-local SVG units. Invalid lengths fall back to 650 ms. The renderer assigns this same value to CSS and reports it to the existing completion fallback, which waits an additional 100 ms if no animation-end event arrives. Native completion remains the primary signal; run tokens reject stale callbacks. No traffic-frequency calculation or user speed control is involved.
 
-## Workflow Lens and Follow (v0.6.1)
+Measured on the actual Loom routes in Chromium:
 
-Selecting the workflow enters **Preview**, without starting any timers or signals. Only the workflow's endpoints and containing ancestors are relevant. Direct participants have a subtle solid outline; containers have a dashed outline and an emphasized nested-component mark. Hover or assistive text explains that activity is inside. Other nodes are gently dimmed and remain fully selectable and expandable. Existing component and signal colors retain their meanings. Preview does not alter positions or the camera.
+| Longest route at viewport | Before | After |
+| --- | ---: | ---: |
+| 1440 × 900 — Uploads → Processing (516 units) | 12,286 ms | 1,354 ms |
+| 390 × 844 — App services → Assets (445 units) | 10,595 ms | 1,297 ms |
 
-During playback or pause, the current endpoints (or their visible ancestors) get a stronger neutral outline. Internal steps identify the active container. If a step is outside the current view, the compact control names the architectural context where it can be found. **Follow** appears only when the current interaction is hidden and a different useful context exists. There is no automatic camera tracking, and no Follow action when the interaction is already visible.
+All five native CSS animation durations matched the calculated values on desktop and mobile (650–1354 ms for these fixtures). Browser checks also verified that destination feedback begins after completion, appears only once, clears promptly, leaves Next enabled, and respects reduced motion. Camera-before-signal sequencing, Preview, manual cross-branch exploration, Replay and Close passed; ordinary navigation regressions passed at all four documented sizes.
 
-**Follow** pauses the workflow immediately and preserves its logical step. [Context resolution](src/workflows/projection.ts) searches shared endpoint ancestors from deepest to shallowest and selects the deepest context exposing a valid projected relationship. For example, the upload request resolves to System overview, the transfer to Cloud, and processing/catalog steps to Assets. If an ancestor endpoint cannot form a visible sibling edge, the resolver falls back to a truthful internal representation. Invalid relationships have no navigation target.
-
-[Context routes](src/graph/navigation.ts) connect the current and destination containers through their lowest common ancestor. [The navigation controller](src/graph/useSemanticZoom.ts) executes the route with one lock, one clock, and camera waypoints at each adjacent boundary. From Clients / Web app to Cloud / Assets, it zooms out through Clients and System overview, then enters Cloud and Assets. Only adjacent graph levels are mounted. Follow uses comfortable destination framing and preserves saved common-ancestor viewports for ordinary Back/breadcrumb navigation. Resize reframes the entire route; reduced motion resolves it immediately. Manual entry and breadcrumb animation retain their existing behavior.
-
-Try starting in the overview, then **Follow** when step 2 is inside Cloud. Continue until step 3, return to the overview, and explore Clients / Web app while paused. **Follow** now takes you across branches into Assets with step 3 still selected. Continue, replay, or close at any time. Unrelated components stay available in both Preview and playback.
-
-The PoC still restarts the preserved interaction when **Continue** is pressed; it does not restore a dot's fractional progress. Follow reveals an architectural context, not an individual leaf's details. Navigation is temporarily locked during its single coordinated transition, as with ordinary Semantic Zoom. Preview emphasis fades in/out; semantic navigation temporarily uses the ordinary graph and restores the lens on arrival. No fixtures, dependencies or routing algorithms changed in v0.6.1.
-
-v0.6.1 verification: **69 tests passed** across 11 files; `npm run build` passed. New tests cover participation and hidden ancestors, unrelated access, deepest valid contexts and internal fallback, common-ancestor routes, duplicate navigation protection, same-context no-op, saved history, resize/reduced motion, Preview and explicit Follow pause. Chromium at 1440 × 900 and 390 × 844 verified Preview before playback, exploration of unrelated Storage, internal Follow, Web app → overview → Assets with the same logical step, paused arrival, completion/replay/close and reduced motion. Frame samples confirmed the cross-branch camera passed through the common overview and mounted at most adjacent graph levels. Mobile checks confirmed controls do not obscure cards, including the longer first-step description. Existing deep navigation, exact viewport restoration, wheel entry and deselected exit checks passed at all four documented sizes. The dense development fixture still reports that the Loom workflow is unavailable.
+Guided camera timing is unchanged: 440 ms per adjacent boundary, with the existing 570–2400 ms bounds. The reviewed cross-branch route retains enough time to recognize the common overview and arrive comfortably. Removing the 10–12 second signal waits provides the responsiveness improvement without shortening that orientation interval or changing manual Semantic Zoom.
 
 ## Dense connections experiment (v0.5.1)
 

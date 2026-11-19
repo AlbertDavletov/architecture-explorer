@@ -331,6 +331,14 @@ button:focus-visible {
   opacity: 1;
   stroke-width: 2.3;
 }
+.signal.done .signal-visual > path:first-child {
+  opacity: 0.9;
+  stroke-width: 1.9;
+}
+.node-unit.done.closed .shell-outline {
+  border: 1.5px solid #7d8f9f;
+  box-shadow: none;
+}
 .node-unit.related.closed .shell-outline {
   border-color: #8494a4;
   box-shadow: 0 0 0 2px #e4e9ee;
@@ -349,29 +357,14 @@ button:focus-visible {
   border: 2px solid #50667b;
   box-shadow: 0 0 0 2px #e4e9ee;
 }
+.node-unit.arriving.closed .shell-outline {
+  border: 2px solid #344d63;
+  box-shadow: 0 0 0 3px #dce4eb;
+}
 .shell-outline {
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease;
-}
-.workflow-location {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 24px;
-}
-.workflow-follow {
-  border: 1px solid #c2cdd7;
-  border-radius: 5px;
-  background: #f4f6f8;
-  padding: 2px 9px;
-  font-size: 11px;
-  cursor: pointer;
-}
-.workflow-follow:disabled {
-  cursor: default;
-  opacity: 0.5;
 }
 @media (prefers-reduced-motion: reduce) {
   .node-visual,
@@ -419,10 +412,6 @@ button:focus-visible {
   height: 30px;
   font-size: 22px;
   border-radius: 5px;
-}
-.workflow-control small {
-  color: #627487;
-  font-size: 11px;
 }
 .workflow-status {
   margin: 10px 0;
@@ -491,15 +480,6 @@ button:focus-visible {
   }
   .workflow-heading strong {
     font-size: 13px;
-  }
-  .workflow-heading strong::after {
-    content: ' · Demo';
-    font-size: 10px;
-    font-weight: 400;
-    color: #627487;
-  }
-  .workflow-control > small {
-    display: none;
   }
   .workflow-status {
     margin: 4px 0 0;

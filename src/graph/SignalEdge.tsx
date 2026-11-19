@@ -3,6 +3,7 @@ import type { Edge, EdgeProps } from '@xyflow/react'
 import type { SignalKind } from '../model/architecture'
 import type { Exposure } from './ComponentNode'
 import type { Emphasis, WorkflowSignal } from '../workflows/overlay'
+import { workflowSignalDuration } from '../workflows/signalDuration'
 
 export type MapEdge = Edge<
   {
@@ -31,7 +32,7 @@ export function SignalEdge({
   const dot = useRef<SVGGElement>(null)
   const { kind, backwards, lane, vertical, scale, exposure } = data!
   const signal = data!.signal
-  // Draw in sibling-local units, so nested signals keep the same apparent pace.
+  // Draw in sibling-local units, independent of semantic zoom scale.
   const dx = (targetX - sourceX) / scale,
     dy = (targetY - sourceY) / scale
   const offset = lane * 14,
@@ -51,7 +52,7 @@ export function SignalEdge({
   const origin = data!.route ? data!.origin : { x: sourceX, y: sourceY }
   useLayoutEffect(() => {
     if (!dot.current || !path.current) return
-    const duration = Math.max(1, (path.current.getTotalLength() / 42) * 1000)
+    const duration = workflowSignalDuration(path.current.getTotalLength())
     dot.current.style.animationDuration = duration + 'ms'
     signal?.measure(duration)
   }, [d, signal?.token, signal?.measure])
@@ -81,6 +82,7 @@ export function SignalEdge({
             ref={dot}
             className={`traveler${signal.reduced ? ' reduced' : ''}`}
             style={style}
+            onAnimationEnd={signal.finish}
           >
             <circle r="6.4" fill="currentColor" opacity=".12" />
             <circle
