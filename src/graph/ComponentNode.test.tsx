@@ -5,6 +5,7 @@ import { buildWorld } from './layout'
 import { scene } from './scene'
 import type { NodeProps } from '@xyflow/react'
 import type { MapNode } from './ComponentNode'
+import { getComponentDetails } from '../inspector/details'
 
 vi.mock('@xyflow/react', () => ({
   Handle: () => null,
@@ -61,4 +62,65 @@ it('does not suggest entry for leaves', () => {
   expect(h.enter).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('button', { name: 'Files' }))
   expect(h.select).toHaveBeenCalledWith('files')
+})
+
+it.each([
+  ['processing', 'assets', 'Processing'],
+  ['records', 'storage', 'Records'],
+  ['compositor', 'rendering', 'Composition'],
+  ['notifications', 'cloud', 'Notifications'],
+])(
+  'offers direct inspection on unselected interactive leaf %s',
+  (id, parent, name) => {
+    const h = mount(id, parent)
+    const inspect = vi.fn()
+    const data = {
+      ...h.props.data,
+      inspect: getComponentDetails(id) ? inspect : undefined,
+    }
+    h.rerender(<ComponentNode {...h.props} data={data} />)
+    const info = screen.getByRole('button', { name: `Inspect ${name}` })
+    expect(info.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(info.classList.contains('nopan')).toBe(true)
+    expect(info.classList.contains('nodrag')).toBe(true)
+    info.focus()
+    expect(document.activeElement).toBe(info)
+    fireEvent.click(info)
+    expect(inspect).toHaveBeenCalledWith(info)
+    expect(h.select).not.toHaveBeenCalled()
+    expect(h.enter).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name }))
+    expect(h.select).toHaveBeenCalledWith(id)
+    expect(inspect).toHaveBeenCalledTimes(1)
+    h.rerender(
+      <ComponentNode {...h.props} data={{ ...data, selected: true }} />,
+    )
+    expect(screen.getByRole('button', { name: `Inspect ${name}` })).toBe(info)
+    h.rerender(<ComponentNode {...h.props} data={data} />)
+    expect(screen.getByRole('button', { name: `Inspect ${name}` })).toBe(info)
+    h.rerender(
+      <ComponentNode
+        {...h.props}
+        data={{ ...data, selected: true, interactive: false }}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: `Inspect ${name}` })).toBeNull()
+  },
+)
+
+it('never offers inspection on a parent, even if an inspect callback is supplied', () => {
+  const h = mount('assets', 'cloud', 'assets')
+  h.rerender(
+    <ComponentNode {...h.props} data={{ ...h.props.data, inspect: vi.fn() }} />,
+  )
+  expect(screen.queryByRole('button', { name: 'Inspect Assets' })).toBeNull()
+  expect(
+    screen.getByRole('button', { name: 'Explore inside Assets' }),
+  ).toBeTruthy()
+})
+
+it('does not offer inspection for an unconfigured leaf', () => {
+  mount('search', 'assets', 'search')
+  expect(getComponentDetails('search')).toBeUndefined()
+  expect(screen.queryByRole('button', { name: 'Inspect Search' })).toBeNull()
 })

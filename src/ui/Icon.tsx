@@ -12,6 +12,7 @@ const paths = {
   nested: 'm4 9 8-4 8 4-8 4z M4 13l8 4 8-4 M4 17l8 4 8-4',
   zoomIn: 'M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0z M15 15l6 6 M7 10h6 M10 7v6',
   chevron: 'm9 6 6 6-6 6',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M12 11v6 M12 7h.01',
 }
 export function Icon({
   name,

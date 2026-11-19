@@ -23,6 +23,7 @@ export type MapNode = Node<
     arriving?: boolean
     select: (id: string) => void
     enter: (id: string) => void
+    inspect?: (trigger: HTMLButtonElement) => void
   },
   'component'
 >
@@ -140,6 +141,20 @@ export function ComponentNode({ data }: NodeProps<MapNode>) {
               }}
             >
               <Icon name="zoomIn" size={17} />
+            </button>
+          )}
+          {interactive && !count && data.inspect && (
+            <button
+              type="button"
+              className="inspect-component nopan nodrag"
+              aria-label={`Inspect ${component.name}`}
+              aria-haspopup="dialog"
+              onClick={(event) => {
+                event.stopPropagation()
+                data.inspect?.(event.currentTarget)
+              }}
+            >
+              <Icon name="info" size={16} />
             </button>
           )}
         </div>
