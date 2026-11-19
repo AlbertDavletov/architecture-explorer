@@ -30,7 +30,12 @@ export function buildWorld(vertical: boolean, getChildren = children) {
     scale: number,
   ): Rect {
     const items = getChildren(parent)
-    const columns = vertical ? 1 : Math.max(1, Math.min(3, items.length))
+    // Four siblings form a balanced square instead of a row with an orphan.
+    const columns = vertical
+      ? 1
+      : items.length === 4
+        ? 2
+        : Math.max(1, Math.min(3, items.length))
     const rows = Math.ceil(items.length / columns)
     const gapX = items.length > 3 ? 64 : 172,
       gapY = vertical ? 36 : 72

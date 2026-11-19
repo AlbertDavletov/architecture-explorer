@@ -1,5 +1,4 @@
 import fixture from './architecture.json'
-import dense from './dense.json'
 
 export type SignalKind = 'request' | 'data' | 'event'
 export type ComponentIcon =
@@ -34,6 +33,28 @@ export function createArchitecture(architecture: Architecture) {
   )
   const children = (parent?: string) =>
     architecture.components.filter((component) => component.parent === parent)
+
+  if (components.size !== architecture.components.length)
+    throw new Error('Architecture component IDs must be unique.')
+  for (const component of components.values()) {
+    if (!component.id.trim() || !component.name.trim())
+      throw new Error('Architecture components need nonempty IDs and names.')
+    if (component.parent !== undefined && !components.has(component.parent))
+      throw new Error(
+        `Unknown parent for "${component.id}": ${component.parent}`,
+      )
+  }
+  for (const relation of architecture.relationships) {
+    if (!components.has(relation.from) || !components.has(relation.to))
+      throw new Error(
+        `Unknown relationship endpoint: ${relation.from} → ${relation.to}`,
+      )
+    if (
+      relation.from === relation.to ||
+      !['request', 'data', 'event'].includes(relation.kind)
+    )
+      throw new Error(`Invalid relationship: ${relation.from} → ${relation.to}`)
+  }
 
   function ancestry(id?: string): Component[] {
     const path: Component[] = []
@@ -93,10 +114,12 @@ export function createArchitecture(architecture: Architecture) {
   }
 }
 
+// Keep the synthetic fixture out of the production import graph. Its module is
+// only loaded when explicitly requested from the development server.
 const selectedFixture =
   import.meta.env.DEV &&
   new URLSearchParams(window.location.search).get('fixture') === 'dense'
-    ? dense
+    ? (await import('./dense.json')).default
     : fixture
 export const architecture = createArchitecture(selectedFixture as Architecture)
 export const { components, children, ancestry, depth, project } = architecture

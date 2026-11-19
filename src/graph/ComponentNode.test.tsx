@@ -66,9 +66,9 @@ it('does not suggest entry for leaves', () => {
 
 it.each([
   ['processing', 'assets', 'Processing'],
-  ['records', 'storage', 'Records'],
+  ['records', 'storage', 'Documents'],
   ['compositor', 'rendering', 'Composition'],
-  ['notifications', 'cloud', 'Notifications'],
+  ['notifications', 'collaboration', 'Notifications'],
 ])(
   'offers direct inspection on unselected interactive leaf %s',
   (id, parent, name) => {
@@ -113,14 +113,16 @@ it('never offers inspection on a parent, even if an inspect callback is supplied
   h.rerender(
     <ComponentNode {...h.props} data={{ ...h.props.data, inspect: vi.fn() }} />,
   )
-  expect(screen.queryByRole('button', { name: 'Inspect Assets' })).toBeNull()
   expect(
-    screen.getByRole('button', { name: 'Explore inside Assets' }),
+    screen.queryByRole('button', { name: 'Inspect Asset services' }),
+  ).toBeNull()
+  expect(
+    screen.getByRole('button', { name: 'Explore inside Asset services' }),
   ).toBeTruthy()
 })
 
 it('does not offer inspection for an unconfigured leaf', () => {
-  mount('search', 'assets', 'search')
-  expect(getComponentDetails('search')).toBeUndefined()
-  expect(screen.queryByRole('button', { name: 'Inspect Search' })).toBeNull()
+  mount('catalog', 'assets', 'catalog')
+  expect(getComponentDetails('catalog')).toBeUndefined()
+  expect(screen.queryByRole('button', { name: 'Inspect Catalog' })).toBeNull()
 })

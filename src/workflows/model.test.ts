@@ -23,8 +23,8 @@ describe('workflow JSON', () => {
       'data',
       'data',
     ])
-    expect(workflow.steps[0]).toMatchObject({ from: 'pages', to: 'gateway' })
-    expect(workflow.steps[4]).toMatchObject({ from: 'catalog', to: 'pages' })
+    expect(workflow.steps[0]).toMatchObject({ from: 'shell', to: 'gateway' })
+    expect(workflow.steps[4]).toMatchObject({ from: 'catalog', to: 'shell' })
   })
   it.each([
     null,
@@ -40,7 +40,7 @@ describe('workflow JSON', () => {
   it('rejects unknown components and mismatched directions/types', () => {
     for (const change of [
       { from: 'missing' },
-      { from: 'gateway', to: 'pages' },
+      { from: 'gateway', to: 'shell' },
       { kind: 'event' },
     ])
       expect(() =>

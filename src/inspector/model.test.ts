@@ -18,7 +18,7 @@ it('loads only the four explicitly authored leaves and leaves structural data un
   expect(getComponentDetails('processing')?.owner).toBe(
     'Loom Media Team (fictional)',
   )
-  expect(getComponentDetails('search')).toBeUndefined()
+  expect(getComponentDetails('catalog')).toBeUndefined()
   expect(getComponentDetails('assets')).toBeUndefined()
   expect(JSON.stringify([...architecture.components])).toBe(before)
 })

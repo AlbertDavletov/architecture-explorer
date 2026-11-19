@@ -12,7 +12,7 @@ import { scene } from './scene'
 import { intersectsInterior } from './routing.test-utils'
 
 it('has a five-level fictional hierarchy with uneven branches and valid dependencies', () => {
-  expect(components.size).toBe(35)
+  expect(components.size).toBe(29)
   expect(depth).toBe(5)
   expect(ancestry('compositor').map((c) => c.id)).toEqual([
     'clients',
@@ -22,8 +22,8 @@ it('has a five-level fictional hierarchy with uneven branches and valid dependen
     'compositor',
   ])
   expect(ancestry('desktop')).toHaveLength(2)
-  expect(children('rendering')).toHaveLength(5)
-  expect(children('clients')).toHaveLength(5)
+  expect(children('rendering')).toHaveLength(4)
+  expect(children('clients')).toHaveLength(3)
   for (const e of fixture.relationships) {
     expect(components.has(e.from)).toBe(true)
     expect(components.has(e.to)).toBe(true)
@@ -33,8 +33,8 @@ it('merges repeated cross-subsystem dependencies but preserves bidirectional sig
   expect(project().edges).toHaveLength(3)
   expect(project('editor').edges).toEqual(
     expect.arrayContaining([
-      { from: 'authoring', to: 'rendering', kind: 'data' },
-      { from: 'rendering', to: 'authoring', kind: 'event' },
+      { from: 'document-state', to: 'history', kind: 'data' },
+      { from: 'history', to: 'document-state', kind: 'data' },
     ]),
   )
   expect(project('files')).toEqual({ nodes: [], edges: [] })

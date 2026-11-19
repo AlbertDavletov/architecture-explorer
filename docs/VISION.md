@@ -15,6 +15,10 @@ The experience should remain intuitive regardless of the size or complexity of t
 
 ---
 
+## Current Demonstration
+
+The current Loom fixture is a fictional collaborative document editor: Clients use application and asset services, which own access to document and file storage. Its web editor separates authoring, document state, rendering, and history; collaboration groups live sessions and notifications. Three authored workflows illustrate upload, open, and save. Inspector metadata is authored demo content. No production telemetry or private architecture is included.
+
 ## 1. Two Core Layers
 
 ### Layer 1 — Architecture

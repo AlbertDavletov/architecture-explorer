@@ -7,42 +7,42 @@
     {
       "id": "edit",
       "name": "Apply your edit",
-      "from": "ui",
-      "to": "authoring",
-      "kind": "request",
-      "description": "An edit in the interface asks Authoring to update the document model."
-    },
-    {
-      "id": "revision",
-      "name": "Keep a revision",
       "from": "authoring",
-      "to": "history",
+      "to": "document-state",
       "kind": "data",
-      "description": "Authoring keeps a local revision in History before requesting persistence."
+      "description": "Authoring applies your edit to the working document state."
     },
     {
       "id": "request",
       "name": "Request a save",
-      "from": "authoring",
+      "from": "document-state",
       "to": "gateway",
       "kind": "request",
-      "description": "The editor asks the gateway to persist the updated document."
+      "description": "Document state asks the gateway to persist the changes."
+    },
+    {
+      "id": "route",
+      "name": "Route the save",
+      "from": "gateway",
+      "to": "document-service",
+      "kind": "request",
+      "description": "The gateway delegates persistence to the Document service."
     },
     {
       "id": "persist",
       "name": "Save document",
-      "from": "gateway",
+      "from": "document-service",
       "to": "records",
-      "kind": "request",
-      "description": "The gateway asks Records to store the new document state."
+      "kind": "data",
+      "description": "The service stores the updated document model and waits for the write to complete."
     },
     {
       "id": "confirm",
       "name": "Confirm saved state",
-      "from": "records",
+      "from": "document-service",
       "to": "notifications",
       "kind": "event",
-      "description": "After storing the document, Records notifies the update service."
+      "description": "After a successful write, the service requests a save confirmation."
     },
     {
       "id": "notify",
@@ -50,7 +50,7 @@
       "from": "notifications",
       "to": "ui",
       "kind": "event",
-      "description": "Notifications tells the editor interface that the changes were saved."
+      "description": "Notifications tells the editor interface that changes were saved."
     }
   ]
 }

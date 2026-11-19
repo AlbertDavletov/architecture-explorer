@@ -22,7 +22,7 @@ afterEach(() => {
   cleanup()
   vi.useRealTimers()
 })
-function setup(parent?: string, reduced = false) {
+function setup(parent?: string, reduced = false, activeWorkflow = workflow) {
   let settle: (success: boolean) => void = () => {}
   let signal: AbortSignal | undefined
   const nav: WorkflowNavigation = {
@@ -39,10 +39,10 @@ function setup(parent?: string, reduced = false) {
   }
   const h = renderHook(
     ({ navigation, reduced }) =>
-      useWorkflow(workflow, architecture, navigation, reduced),
+      useWorkflow(activeWorkflow, architecture, navigation, reduced),
     { initialProps: { navigation: nav, reduced } },
   )
-  const open = () => act(() => h.result.current.open())
+  const open = () => act(() => h.result.current.preview())
   const start = () => act(() => h.result.current.start())
   const focus = async () =>
     act(async () => {
@@ -313,7 +313,7 @@ it('Replay and Close clear arrival and callbacks from the previous run', async (
   const h = renderHook(() =>
     useWorkflow(single, architecture, navigation, false),
   )
-  act(() => h.result.current.open())
+  act(() => h.result.current.preview())
   act(() => h.result.current.start())
   await act(async () => {
     await vi.advanceTimersByTimeAsync(FOCUS_DWELL)
@@ -347,7 +347,7 @@ it('surfaces invalid relationships instead of starting misleading navigation', (
   const h = renderHook(() =>
     useWorkflow(invalid, architecture, { navigating: false, goTo }, false),
   )
-  act(() => h.result.current.open())
+  act(() => h.result.current.preview())
   act(() => h.result.current.start())
   expect(h.result.current.status).toBe('error')
   expect(h.result.current.error).toMatch(/unknown/)
@@ -375,7 +375,7 @@ it('completes internal actions with a static highlight instead of inventing an e
       false,
     ),
   )
-  act(() => h.result.current.open())
+  act(() => h.result.current.preview())
   act(() => h.result.current.start())
   await act(async () => {
     await vi.advanceTimersByTimeAsync(FOCUS_DWELL)
@@ -406,20 +406,25 @@ it('completes internal actions with a static highlight instead of inventing an e
 })
 
 it('keeps lens geometry/navigation intact and separates active, completed and unrelated emphasis', async () => {
-  const h = setup('assets')
+  const lensWorkflow = { ...workflow, steps: workflow.steps.slice(0, 3) }
+  const h = setup('assets', false, lensWorkflow)
   const graph = scene(
     buildWorld(false),
     'assets',
     undefined,
-    'search',
+    'catalog',
     true,
     vi.fn(),
     vi.fn(),
   )
-  const projected = workflow.steps.map((s) =>
+  const projected = lensWorkflow.steps.map((s) =>
     projectStep(s, architecture, 'assets'),
   )
-  const participation = projectParticipation(workflow, architecture, 'assets')
+  const participation = projectParticipation(
+    lensWorkflow,
+    architecture,
+    'assets',
+  )
   h.open()
   let shown = workflowOverlay(
     graph,
@@ -429,14 +434,14 @@ it('keeps lens geometry/navigation intact and separates active, completed and un
     participation,
   )
   expect(shown.edges.some((e) => e.data?.signal)).toBe(false)
-  const search = shown.nodes.find((n) => n.id === 'search')!
-  expect(search.data).toMatchObject({
+  const catalog = shown.nodes.find((n) => n.id === 'catalog')!
+  expect(catalog.data).toMatchObject({
     emphasis: 'dimmed',
     interactive: true,
     selected: true,
   })
-  expect(search.data.enter).toBe(
-    graph.nodes.find((n) => n.id === 'search')!.data.enter,
+  expect(catalog.data.enter).toBe(
+    graph.nodes.find((n) => n.id === 'catalog')!.data.enter,
   )
   const mock = {
     ...h.result.current,
