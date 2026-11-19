@@ -1,0 +1,56 @@
+{
+  "id": "save-changes",
+  "name": "Save changes",
+  "description": "An illustrative Loom scenario, not live traffic.",
+  "execution": "sequence",
+  "steps": [
+    {
+      "id": "edit",
+      "name": "Apply your edit",
+      "from": "ui",
+      "to": "authoring",
+      "kind": "request",
+      "description": "An edit in the interface asks Authoring to update the document model."
+    },
+    {
+      "id": "revision",
+      "name": "Keep a revision",
+      "from": "authoring",
+      "to": "history",
+      "kind": "data",
+      "description": "Authoring keeps a local revision in History before requesting persistence."
+    },
+    {
+      "id": "request",
+      "name": "Request a save",
+      "from": "authoring",
+      "to": "gateway",
+      "kind": "request",
+      "description": "The editor asks the gateway to persist the updated document."
+    },
+    {
+      "id": "persist",
+      "name": "Save document",
+      "from": "gateway",
+      "to": "records",
+      "kind": "request",
+      "description": "The gateway asks Records to store the new document state."
+    },
+    {
+      "id": "confirm",
+      "name": "Confirm saved state",
+      "from": "records",
+      "to": "notifications",
+      "kind": "event",
+      "description": "After storing the document, Records notifies the update service."
+    },
+    {
+      "id": "notify",
+      "name": "Show saved status",
+      "from": "notifications",
+      "to": "ui",
+      "kind": "event",
+      "description": "Notifications tells the editor interface that the changes were saved."
+    }
+  ]
+}

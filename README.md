@@ -21,7 +21,7 @@ Drag the background to pan. Click empty canvas to clear the selection and zoom w
 
 Use Tab to focus a card and Enter or Space to select it. Press Enter on a selected expandable card to explore it. Esc clears a selected card or returns one level when inside a component.
 
-The default Architecture view is static. Blue connections represent requests, green data transfers, and orange events; chevrons show direction. Open **Workflows → Start** to explore **Upload an image** one step at a time. Each **Next** action finds and explains one interaction, then waits. Only its current visible interaction gets a moving dot. Reduced-motion preferences make navigation immediate and replace the workflow moving dot with a stationary marker.
+The default Architecture view is static. Blue connections represent requests, green data transfers, and orange events; chevrons show direction. Open **Workflows**, choose a scenario, then **Start** to explore it one step at a time. Each **Next** action finds and explains one interaction, then waits. Only its current visible interaction gets a moving dot. Reduced-motion preferences make navigation immediate and replace the workflow moving dot with a stationary marker.
 
 ## Edit the fixture
 
@@ -39,7 +39,7 @@ Add interactions to `relationships` using `from`, `to`, and one of `request`, `d
 
 ## Hierarchy stress fixture
 
-The fictional Loom collaborative editor contains 35 components, 42 directed relationships, and five component levels. The overview has Clients and Cloud. Clients, Cloud, Editor, and Rendering each have five direct children. Assets has four. Branches include Web, Desktop, iOS, Android, asset uploads and processing, storage, notifications, and sharing.
+The fictional Loom collaborative editor contains 35 components, 45 directed relationships, and five component levels. The overview has Clients and Cloud. Clients, Cloud, Editor, and Rendering each have five direct children. Assets has four. Branches include Web, Desktop, iOS, Android, asset uploads and processing, storage, notifications, and sharing.
 
 Try Clients ? Web app ? Editor ? Rendering, return to System overview, then enter Cloud ? Assets. The deepest cards are at component depth five. All navigation derives from parent links.
 
@@ -55,15 +55,31 @@ The dense dependency experiment is documented below. Physical trackpad gestures 
 
 Run npm test for architecture projection, viewport calculations, navigation lifecycle, gesture blocking, resize, reduced motion, and component interaction tests. Tests use Vitest, React Testing Library, and jsdom.
 
-## Guided step-by-step workflows (v0.6.2)
+## Multiple guided workflows (v0.7)
 
-Architecture shows structure; Workflows show behavior on the same canvas. Traffic Awareness remains a future optional Architecture capability. This is an illustrative Loom scenario, not telemetry or a production trace.
+Architecture shows structure; Workflows show behavior on the same canvas. Traffic Awareness remains a future optional Architecture capability. These are illustrative scenarios for fictional Loom, not telemetry, production traces, or the actual Adobe Express architecture.
 
-Open **Workflows** to preview participants. Direct participants have a subtle solid outline; containers have a dashed outline and an emphasized nested mark. Other nodes remain visible and navigable. **Start** explains only the first step. **Next** explains exactly one subsequent step. Nothing advances while you read or explore.
+Open **Workflows** and choose a scenario in the native dropdown to preview its participants. Direct participants have a subtle solid outline; containers have a dashed outline and an emphasized nested mark. Other nodes remain visible and navigable. **Start** explains only the first step. **Next** explains exactly one subsequent step. Nothing advances while you read or explore.
 
-The five steps are **Request upload → Store image → Prepare preview → Add to library → Show image**. They use the existing directed relationships from Pages to Gateway, Gateway to Uploads, Uploads to Processing, Processing to Catalog, and Catalog to Pages. Loom and the dense fixture are unchanged in this release.
+| Scenario | Logical steps and paths |
+| --- | --- |
+| Upload an image | Request upload: Pages → Gateway; Store image: Gateway → Uploads; Prepare preview: Uploads → Processing; Add to library: Processing → Catalog; Show image: Catalog → Pages. The existing five-step definition is unchanged. |
+| Open a document | Open document: Pages → Gateway; Find saved content: Gateway → Records; Read document: Records → Gateway; Load into editor: Gateway → Authoring; Show document: Authoring → Rendering. |
+| Save changes | Apply your edit: Interface → Authoring; Keep a revision: Authoring → History; Request a save: Authoring → Gateway; Save document: Gateway → Records; Confirm saved state: Records → Notifications; Show saved status: Notifications → Interface. |
 
-Each action follows **Navigate → Focus → Signal → Hold**. A clearly visible interaction stays in place; otherwise the existing projection finds the deepest valid context exposing distinct endpoints. For the normal overview journey, the contexts are System overview, Cloud, Assets, Assets, System overview. Cross-branch routes pass through the lowest common ancestor using the existing spatial coordinates and adjacent-level transitions.
+All three use the same engine, lens, projected edges, adaptive signal duration and camera controller. Requests describe logical operations, so the existing Gateway → Records request relationship supports both reading and saving. History records a local revision; it is not a second cloud write.
+
+Three explicit relationships were added to [Loom](src/model/architecture.json): `records → gateway (data)` returns the saved model, `gateway → authoring (data)` delivers it to the editor, and `records → notifications (event)` announces successful persistence. These support the new scenarios; no workflow invents edges at render time. Components, layout, Upload an image and the synthetic dense fixture are unchanged.
+
+### Selection and switching
+
+The closed UI is one **Workflows** button. Opening it focuses a native selector with three choices; selecting enters Preview without playback. The selected name remains visible in the dropdown alongside Start, Next or Replay and Close. Selection is enabled in Preview, Waiting and Completed (also after an error), and disabled during navigation, focus or signal playback. Manual semantic navigation also briefly disables it. Close remains available throughout.
+
+Switching invalidates the previous run, cancels its outstanding work and clears progress, arrival feedback and duration measurements. The new scenario starts in Preview, preserving the current context, pan and zoom. If that area contains no participants, ancestors remain discoverable via breadcrumbs and the lens; Start automatically navigates to the first interaction. It does not reset to the overview merely because a selection changed.
+
+The native selector supports keyboard and touch input, with visible focus outlines. Escape inside the panel closes it and returns focus to Workflows without also navigating the map; an open native option popup may consume Escape first. Close resets the choice, so the next opening shows the selection prompt. There is no separate workflow sidebar or session manager.
+
+Each action follows **Navigate → Focus → Signal → Hold**. A clearly visible interaction stays in place; otherwise the existing projection finds the deepest valid context exposing distinct endpoints. For Upload an image starting at the overview, the contexts are System overview, Cloud, Assets, Assets, System overview. Open a document visits Cloud storage and ends inside Editor; Save changes starts inside Editor, visits Cloud storage and notifications, and ends at the overview. Cross-branch routes pass through the lowest common ancestor using the existing spatial coordinates and adjacent-level transitions.
 
 If manual panning moved an interaction off-screen at the correct level, the action gently reframes it before the signal. Already visible endpoints do not cause camera movement.
 
@@ -75,7 +91,7 @@ Between steps you can pan, zoom, use breadcrumbs and explore unrelated component
 
 ### JSON and validation
 
-Edit [src/workflows/upload-image.json](src/workflows/upload-image.json). For example:
+Edit [upload-image.json](src/workflows/upload-image.json), [open-document.json](src/workflows/open-document.json), or [save-changes.json](src/workflows/save-changes.json). To extend the catalog, add another JSON definition and import it into the ordered array in [catalog.ts](src/workflows/catalog.ts); no React UI changes are needed. For example:
 
 ```json
 {
@@ -95,7 +111,7 @@ Edit [src/workflows/upload-image.json](src/workflows/upload-image.json). For exa
 }
 ```
 
-Step names and descriptions are optional. Without a short name, the control falls back to endpoint names. Descriptions remain available on hover. Stable step IDs and explicit sequence execution leave room for future branching definitions, but no parallel scheduler is implemented. Validation checks IDs, names, component references and the exact directed signal type. Missing interactions are surfaced as errors, never invented edges. The experimental dense fixture reports that this Loom workflow is unavailable.
+The catalog requires a nonempty short name of at most 40 characters for every step. Descriptions are optional and available on hover. The lower-level parser retains its optional-name compatibility, but catalog entries must be named. Catalog validation checks unique workflow IDs, unique step IDs within each workflow, names, component references and the exact directed signal type. Array order defines both selector order and execution order. Invalid definitions fail clearly instead of being silently skipped; missing interactions never become invented edges. The experimental dense fixture reports that the Loom catalog is unavailable. Stable step IDs and explicit sequence execution leave room for future branching definitions, but no parallel scheduler is implemented.
 
 ### State, navigation and cancellation
 
@@ -105,9 +121,13 @@ Step names and descriptions are optional. Without a short name, the control fall
 
 [Projection](src/workflows/projection.ts) stays independent of playback and resolves logical component IDs to visible ancestors, real directed relationships, internal actions or out-of-view interactions. [The lens](src/workflows/overlay.ts) adds participation/current/completed emphasis without changing coordinates or introducing another graph engine. The architecture data model has no camera or workflow state.
 
-Known limits: one authored sequential scenario; no previous-step control, branching engine, real telemetry or cross-level signal travel. Workflow timing is explanatory, not real latency; long routes are capped at 1800 ms. Guided cancellation rolls back the camera rather than freezing between levels. Existing dense-routing crossings remain. Physical trackpad gestures and larger real architectures still need evaluation.
+The scene supplies fixed React Flow handle coordinates from the deterministic node boxes. Without these, controlled lens updates could clear measured handle bounds between ResizeObserver deliveries, leaving all edges absent and a guided step waiting for a signal that never mounted. A regression test exercises the real React Flow store across repeated lens changes and every hierarchy level, without relying on DOM measurement timing. Camera and edge routing algorithms are unchanged.
 
-Validation: **90 tests passed** across 12 files, and `npm run build` passed. Chromium at 1440 × 900 and 390 × 844 completed all five user-paced steps, manual cross-branch exploration between steps, repeated Next clicks, replay, cancellation during camera/signal activity and reduced motion. Per-frame checks verified no signals during navigation/focus and no camera motion during a signal. Additional checks verified off-screen interactions reframe before animation. Existing deep-entry, breadcrumb, exact viewport restoration and wheel-navigation regressions passed at 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844. A local WebM recording captured the desktop journey.
+Known limits: three authored sequential scenarios; no workflow editor, previous-step control, branching engine, real telemetry or cross-level signal travel. Workflow timing is explanatory, not real latency; long routes are capped at 1800 ms. Guided cancellation rolls back the camera rather than freezing between levels. Existing dense-routing crossings remain. Physical trackpad gestures, physical touch devices and larger real architectures still need evaluation.
+
+v0.7 validation: **114 tests passed across 16 files**, including catalog rejection, every-level projections, all three complete engine sequences, switching isolation, stale callbacks, native control behavior and the handle-bounds regression. `npm run build` passed. Production Chromium at **1440 × 900** and **390 × 844** completed all three workflows, manual exploration in Assets between Save changes steps, switching in Preview/Waiting/Completed, exact context and panned-viewport preservation, Replay/Close, keyboard selection and Escape. Each scenario's first step also passed with reduced motion. Frame checks verified camera-before-signal sequencing and a stationary camera during animation; native CSS durations matched the adaptive calculation. The mobile panel stayed outside the editor cards. Ordinary deep-entry, exact viewport restoration, breadcrumbs, wheel entry and deselected exit passed at 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844. No browser console errors were observed. A local WebM demo records the desktop scenarios.
+
+Previous v0.6.2 validation: **90 tests passed** across 12 files, and `npm run build` passed. Chromium at 1440 × 900 and 390 × 844 completed all five user-paced steps, manual cross-branch exploration between steps, repeated Next clicks, replay, cancellation during camera/signal activity and reduced motion. Per-frame checks verified no signals during navigation/focus and no camera motion during a signal. Additional checks verified off-screen interactions reframe before animation. Existing deep-entry, breadcrumb, exact viewport restoration and wheel-navigation regressions passed at 1440 × 900, 1024 × 768, 768 × 1024 and 390 × 844. A local WebM recording captured the desktop journey.
 
 ### Transition polish
 

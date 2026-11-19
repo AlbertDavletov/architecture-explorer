@@ -1,0 +1,48 @@
+{
+  "id": "open-document",
+  "name": "Open a document",
+  "description": "An illustrative Loom scenario, not live traffic.",
+  "execution": "sequence",
+  "steps": [
+    {
+      "id": "request",
+      "name": "Open document",
+      "from": "pages",
+      "to": "gateway",
+      "kind": "request",
+      "description": "You choose a document. Pages requests its saved content."
+    },
+    {
+      "id": "retrieve",
+      "name": "Find saved content",
+      "from": "gateway",
+      "to": "records",
+      "kind": "request",
+      "description": "The gateway asks Records for the document model."
+    },
+    {
+      "id": "read",
+      "name": "Read document",
+      "from": "records",
+      "to": "gateway",
+      "kind": "data",
+      "description": "Records returns the saved document model to the gateway."
+    },
+    {
+      "id": "deliver",
+      "name": "Load into editor",
+      "from": "gateway",
+      "to": "authoring",
+      "kind": "data",
+      "description": "The gateway delivers the document model to Authoring in the web editor."
+    },
+    {
+      "id": "display",
+      "name": "Show document",
+      "from": "authoring",
+      "to": "rendering",
+      "kind": "data",
+      "description": "Authoring passes the loaded model to Rendering for display."
+    }
+  ]
+}
